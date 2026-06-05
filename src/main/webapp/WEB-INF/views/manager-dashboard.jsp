@@ -1,0 +1,243 @@
+<%@ page contentType="text/html;charset=UTF-8" language="java" %>
+<%@ taglib prefix="c" uri="jakarta.tags.core" %>
+<%@ taglib prefix="fmt" uri="jakarta.tags.fmt" %>
+<jsp:include page="/WEB-INF/includes/header.jsp"><jsp:param name="title" value="Quan ly - Dashboard"/></jsp:include>
+
+<div class="container py-5">
+    <h2 class="page-heading mb-4"><i class="bi bi-gear"></i>Quan ly he thong</h2>
+
+    <c:if test="${not empty success}"><div class="alert alert-custom-success">${success}</div></c:if>
+    <c:if test="${not empty error}"><div class="alert alert-custom-error">${error}</div></c:if>
+
+    <!-- Tabs -->
+    <ul class="nav nav-tabs-custom mb-4">
+        <li class="nav-item">
+            <a class="nav-link ${tab == 'cars' ? 'active' : ''}" href="${pageContext.request.contextPath}/manager/dashboard?tab=cars">
+                <i class="bi bi-car-front me-1"></i>Quan ly xe
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link ${tab == 'assign' ? 'active' : ''}" href="${pageContext.request.contextPath}/manager/dashboard?tab=assign">
+                <i class="bi bi-person-badge me-1"></i>Gan tai xe
+            </a>
+        </li>
+    </ul>
+
+    <!-- Cars Tab -->
+    <c:if test="${tab == 'cars'}">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0">Danh sach xe (${cars.size()})</h5>
+            <button class="btn btn-accent btn-sm" data-bs-toggle="modal" data-bs-target="#addCarModal">
+                <i class="bi bi-plus-lg me-1"></i>Them xe
+            </button>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-custom">
+                <thead>
+                    <tr>
+                        <th>ID</th><th>Bien so</th><th>Hang</th><th>Model</th><th>Loai</th>
+                        <th>Gia/ngay</th><th>Dat coc</th><th>Trang thai</th><th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <c:forEach var="car" items="${cars}">
+                    <tr>
+                        <td>${car.carId}</td>
+                        <td class="fw-bold">${car.licensePlate}</td>
+                        <td>${car.brand}</td>
+                        <td>${car.model}</td>
+                        <td><span class="car-tag">${car.seatCount} cho</span></td>
+                        <td><fmt:formatNumber value="${car.dailyRate}" pattern="#,###"/></td>
+                        <td><fmt:formatNumber value="${car.depositAmount}" pattern="#,###"/></td>
+                        <td>
+                            <c:choose>
+                                <c:when test="${car.status == 'AVAILABLE'}"><span class="badge-status badge-accepted">AVAILABLE</span></c:when>
+                                <c:when test="${car.status == 'MAINTENANCE'}"><span class="badge-status badge-pending">MAINTENANCE</span></c:when>
+                                <c:otherwise><span class="badge-status badge-cancelled">${car.status}</span></c:otherwise>
+                            </c:choose>
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-accent" data-bs-toggle="modal"
+                                    data-bs-target="#editCarModal-${car.carId}"><i class="bi bi-pencil"></i></button>
+                        </td>
+                    </tr>
+
+                    <!-- Edit Modal -->
+                    <div class="modal fade" id="editCarModal-${car.carId}" tabindex="-1">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <form method="post" action="${pageContext.request.contextPath}/manager/dashboard">
+                                    <input type="hidden" name="action" value="editCar">
+                                    <input type="hidden" name="carId" value="${car.carId}">
+                                    <div class="modal-header"><h5 class="modal-title">Sua xe: ${car.licensePlate}</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                                    <div class="modal-body">
+                                        <div class="row g-3">
+                                            <div class="col-md-4">
+                                                <label class="form-label">Loai xe</label>
+                                                <select name="carTypeId" class="form-select">
+                                                    <c:forEach var="ct" items="${carTypes}">
+                                                        <option value="${ct.carTypeId}" ${ct.carTypeId == car.carTypeId ? 'selected' : ''}>${ct.typeName}</option>
+                                                    </c:forEach>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-4"><label class="form-label">Bien so</label><input type="text" name="licensePlate" class="form-control" value="${car.licensePlate}" required></div>
+                                            <div class="col-md-4"><label class="form-label">Hang xe</label><input type="text" name="brand" class="form-control" value="${car.brand}" required></div>
+                                            <div class="col-md-4"><label class="form-label">Model</label><input type="text" name="model" class="form-control" value="${car.model}" required></div>
+                                            <div class="col-md-4"><label class="form-label">Nam SX</label><input type="number" name="manufactureYear" class="form-control" value="${car.manufactureYear}"></div>
+                                            <div class="col-md-4"><label class="form-label">Mau</label><input type="text" name="color" class="form-control" value="${car.color}"></div>
+                                            <div class="col-md-4">
+                                                <label class="form-label">Hop so</label>
+                                                <select name="transmission" class="form-select">
+                                                    <option value="">--</option>
+                                                    <option value="AUTOMATIC" ${car.transmission == 'AUTOMATIC' ? 'selected' : ''}>AUTOMATIC</option>
+                                                    <option value="MANUAL" ${car.transmission == 'MANUAL' ? 'selected' : ''}>MANUAL</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label">Nhien lieu</label>
+                                                <select name="fuelType" class="form-select">
+                                                    <option value="">--</option>
+                                                    <option value="GASOLINE" ${car.fuelType == 'GASOLINE' ? 'selected' : ''}>GASOLINE</option>
+                                                    <option value="DIESEL" ${car.fuelType == 'DIESEL' ? 'selected' : ''}>DIESEL</option>
+                                                    <option value="HYBRID" ${car.fuelType == 'HYBRID' ? 'selected' : ''}>HYBRID</option>
+                                                    <option value="ELECTRIC" ${car.fuelType == 'ELECTRIC' ? 'selected' : ''}>ELECTRIC</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-4"><label class="form-label">ODO (km)</label><input type="number" name="mileage" class="form-control" value="${car.mileage}" required></div>
+                                            <div class="col-md-4"><label class="form-label">Gia/ngay</label><input type="number" name="dailyRate" class="form-control" value="${car.dailyRate}" required></div>
+                                            <div class="col-md-4"><label class="form-label">Dat coc</label><input type="number" name="depositAmount" class="form-control" value="${car.depositAmount}" required></div>
+                                            <div class="col-md-4">
+                                                <label class="form-label">Trang thai</label>
+                                                <select name="status" class="form-select">
+                                                    <option value="AVAILABLE" ${car.status == 'AVAILABLE' ? 'selected' : ''}>AVAILABLE</option>
+                                                    <option value="MAINTENANCE" ${car.status == 'MAINTENANCE' ? 'selected' : ''}>MAINTENANCE</option>
+                                                    <option value="INACTIVE" ${car.status == 'INACTIVE' ? 'selected' : ''}>INACTIVE</option>
+                                                    <option value="RETIRED" ${car.status == 'RETIRED' ? 'selected' : ''}>RETIRED</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-6"><label class="form-label">Image URL</label><input type="text" name="imageUrl" class="form-control" value="${car.imageUrl}"></div>
+                                            <div class="col-md-6"><label class="form-label">Mo ta</label><input type="text" name="description" class="form-control" value="${car.description}"></div>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-outline-accent" data-bs-dismiss="modal">Huy</button>
+                                        <button type="submit" class="btn btn-accent">Luu</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    </c:forEach>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Add Car Modal -->
+        <div class="modal fade" id="addCarModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <form method="post" action="${pageContext.request.contextPath}/manager/dashboard">
+                        <input type="hidden" name="action" value="addCar">
+                        <div class="modal-header"><h5 class="modal-title">Them xe moi</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                        <div class="modal-body">
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">Loai xe</label>
+                                    <select name="carTypeId" class="form-select" required>
+                                        <c:forEach var="ct" items="${carTypes}">
+                                            <option value="${ct.carTypeId}">${ct.typeName}</option>
+                                        </c:forEach>
+                                    </select>
+                                </div>
+                                <div class="col-md-4"><label class="form-label">Bien so</label><input type="text" name="licensePlate" class="form-control" required></div>
+                                <div class="col-md-4"><label class="form-label">Hang xe</label><input type="text" name="brand" class="form-control" required></div>
+                                <div class="col-md-4"><label class="form-label">Model</label><input type="text" name="model" class="form-control" required></div>
+                                <div class="col-md-4"><label class="form-label">Nam SX</label><input type="number" name="manufactureYear" class="form-control"></div>
+                                <div class="col-md-4"><label class="form-label">Mau</label><input type="text" name="color" class="form-control"></div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Hop so</label>
+                                    <select name="transmission" class="form-select"><option value="">--</option><option value="AUTOMATIC">AUTOMATIC</option><option value="MANUAL">MANUAL</option></select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Nhien lieu</label>
+                                    <select name="fuelType" class="form-select"><option value="">--</option><option value="GASOLINE">GASOLINE</option><option value="DIESEL">DIESEL</option><option value="HYBRID">HYBRID</option><option value="ELECTRIC">ELECTRIC</option></select>
+                                </div>
+                                <div class="col-md-4"><label class="form-label">ODO</label><input type="number" name="mileage" class="form-control" value="0" required></div>
+                                <div class="col-md-4"><label class="form-label">Gia/ngay (VND)</label><input type="number" name="dailyRate" class="form-control" required></div>
+                                <div class="col-md-4"><label class="form-label">Dat coc (VND)</label><input type="number" name="depositAmount" class="form-control" value="0" required></div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Trang thai</label>
+                                    <select name="status" class="form-select"><option value="AVAILABLE">AVAILABLE</option><option value="MAINTENANCE">MAINTENANCE</option></select>
+                                </div>
+                                <div class="col-md-6"><label class="form-label">Image URL</label><input type="text" name="imageUrl" class="form-control"></div>
+                                <div class="col-md-6"><label class="form-label">Mo ta</label><input type="text" name="description" class="form-control"></div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline-accent" data-bs-dismiss="modal">Huy</button>
+                            <button type="submit" class="btn btn-accent">Them xe</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </c:if>
+
+    <!-- Assign Driver Tab -->
+    <c:if test="${tab == 'assign'}">
+        <h5 class="mb-3">Gan tai xe cho hop dong</h5>
+
+        <c:if test="${not empty acceptedContracts}">
+        <div class="mb-4">
+            <label class="form-label">Chon hop dong da duyet:</label>
+            <div class="d-flex flex-wrap gap-2">
+                <c:forEach var="ac" items="${acceptedContracts}">
+                    <a href="${pageContext.request.contextPath}/manager/dashboard?tab=assign&contractId=${ac.contractId}"
+                       class="btn btn-sm ${contract != null and contract.contractId == ac.contractId ? 'btn-accent' : 'btn-outline-accent'}">
+                        ${ac.contractCode}
+                    </a>
+                </c:forEach>
+            </div>
+        </div>
+        </c:if>
+
+        <c:if test="${not empty details}">
+        <div class="card-custom">
+            <div class="card-header">Hop dong: ${contract.contractCode} | ${contract.customerName}</div>
+            <div class="card-body">
+                <c:forEach var="d" items="${details}">
+                    <div class="car-card mb-2">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>${d.carBrand} ${d.carModel}</strong> - ${d.licensePlate}
+                                <c:if test="${d.requiresDriver}">
+                                    <span class="car-tag"><i class="bi bi-person-badge me-1"></i>Can tai xe</span>
+                                </c:if>
+                                <c:if test="${not d.requiresDriver}">
+                                    <span class="car-tag text-muted">Tu lai</span>
+                                </c:if>
+                            </div>
+                            <c:if test="${d.requiresDriver}">
+                                <form method="post" action="${pageContext.request.contextPath}/manager/dashboard" class="d-flex gap-2">
+                                    <input type="hidden" name="action" value="assignDriver">
+                                    <input type="hidden" name="contractDetailId" value="${d.contractDetailId}">
+                                    <select name="driverId" class="form-select form-select-sm" style="width:200px" required>
+                                        <option value="">Chon tai xe</option>
+                                        <c:forEach var="dr" items="${drivers}">
+                                            <option value="${dr.driverId}">${dr.fullName} (${dr.licenseClass})</option>
+                                        </c:forEach>
+                                    </select>
+                                    <button class="btn btn-sm btn-accent">Gan</button>
+                                </form>
+                            </c:if>
+                        </div>
+                    </div>
+                </c:forEach>
+            </div>
+        </div>
+        </c:if>
+    </c:if>
+</div>
+
+<jsp:include page="/WEB-INF/includes/footer.jsp"/>
