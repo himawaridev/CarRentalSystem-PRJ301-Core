@@ -26,6 +26,9 @@
                 <li class="nav-item">
                     <a class="nav-link" href="${ctx}/search"><i class="bi bi-search me-1"></i>Tim xe</a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="${ctx}/cars"><i class="bi bi-grid me-1"></i>Xem xe</a>
+                </li>
                 <c:if test="${not empty sessionScope.loggedInUser}">
                     <c:if test="${sessionScope.userRoles.contains('CUSTOMER')}">
                         <li class="nav-item">
