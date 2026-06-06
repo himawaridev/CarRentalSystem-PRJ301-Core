@@ -14,9 +14,9 @@ import java.util.Set;
 @WebServlet("/my-contracts")
 public class CustomerContractsServlet extends HttpServlet {
 
-    // Statuses where customer can cancel (before payment/pickup)
+    // Statuses where customer can cancel (before payment)
     private static final Set<String> CANCELLABLE = Set.of(
-        "PENDING_REVIEW", "ACCEPTED", "DEPOSIT_PAID"
+        "PENDING_REVIEW", "ACCEPTED"
     );
 
     @Override

@@ -148,9 +148,10 @@
                                 </div>
                             </div>
                             <c:if test="${car.status == 'AVAILABLE'}">
-                                <a href="${pageContext.request.contextPath}/search" class="btn btn-accent btn-sm">
+                                <button class="btn btn-accent btn-sm"
+                                        onclick="openBookingModal(${car.carId}, '${car.brand} ${car.model}')">
                                     <i class="bi bi-calendar-check me-1"></i>Dat xe
-                                </a>
+                                </button>
                             </c:if>
                         </div>
                     </div>
@@ -159,5 +160,76 @@
         </c:forEach>
     </div>
 </div>
+
+<!-- Booking Modal -->
+<div class="modal fade" id="bookingModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="directBookForm" method="get" action="${pageContext.request.contextPath}/book">
+                <input type="hidden" id="modalCarId" name="carId" value="">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-calendar-check me-2"></i>Dat xe: <span id="modalCarName"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Ngay nhan xe</label>
+                        <input type="datetime-local" name="pickupAt" id="modalPickup" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Ngay tra xe</label>
+                        <input type="datetime-local" name="returnAt" id="modalReturn" class="form-control" required>
+                    </div>
+                    <div class="text-muted small">
+                        <i class="bi bi-info-circle me-1"></i>Sau khi chon ngay, ban se duoc chuyen den trang xac nhan dat xe.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-accent" data-bs-dismiss="modal">Huy</button>
+                    <button type="submit" class="btn btn-accent">
+                        <i class="bi bi-arrow-right me-1"></i>Tiep tuc dat xe
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function openBookingModal(carId, carName) {
+    document.getElementById('modalCarId').value = carId;
+    document.getElementById('modalCarName').textContent = carName;
+
+    // Set default dates: pickup = tomorrow 8AM, return = day after tomorrow 8AM
+    var now = new Date();
+    var pickup = new Date(now.getTime() + 24*60*60*1000);
+    pickup.setHours(8, 0, 0, 0);
+    var ret = new Date(pickup.getTime() + 24*60*60*1000);
+
+    document.getElementById('modalPickup').value = formatDT(pickup);
+    document.getElementById('modalReturn').value = formatDT(ret);
+
+    var modal = new bootstrap.Modal(document.getElementById('bookingModal'));
+    modal.show();
+}
+
+function formatDT(d) {
+    return d.getFullYear() + '-' +
+        String(d.getMonth()+1).padStart(2,'0') + '-' +
+        String(d.getDate()).padStart(2,'0') + 'T' +
+        String(d.getHours()).padStart(2,'0') + ':' +
+        String(d.getMinutes()).padStart(2,'0');
+}
+
+// Validate return > pickup
+document.getElementById('directBookForm').addEventListener('submit', function(e) {
+    var p = new Date(document.getElementById('modalPickup').value);
+    var r = new Date(document.getElementById('modalReturn').value);
+    if (r <= p) {
+        e.preventDefault();
+        alert('Ngay tra xe phai sau ngay nhan xe!');
+    }
+});
+</script>
 
 <jsp:include page="/WEB-INF/includes/footer.jsp"/>

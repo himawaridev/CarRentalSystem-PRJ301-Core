@@ -61,20 +61,26 @@
                             </td>
                             <td class="text-muted small">${c.createdAt}</td>
                             <td>
-                                <!-- Cancel button: only show for cancellable statuses -->
-                                <c:if test="${c.status == 'PENDING_REVIEW' || c.status == 'ACCEPTED' || c.status == 'DEPOSIT_PAID'}">
-                                    <form method="post" action="${pageContext.request.contextPath}/my-contracts"
-                                          onsubmit="return confirm('Ban co chac chan muon huy hop dong ${c.contractCode}?\n\nHanh dong nay khong the hoan tac!')">
-                                        <input type="hidden" name="action" value="cancel">
-                                        <input type="hidden" name="contractId" value="${c.contractId}">
-                                        <button type="submit" class="btn btn-sm btn-outline-danger">
-                                            <i class="bi bi-x-circle me-1"></i>Huy
-                                        </button>
-                                    </form>
-                                </c:if>
-                                <c:if test="${c.status == 'CAR_PICKED_UP'}">
-                                    <span class="text-muted small"><i class="bi bi-lock me-1"></i>Dang thue</span>
-                                </c:if>
+                                <div class="d-flex gap-1 align-items-center">
+                                    <a href="${pageContext.request.contextPath}/contract-detail?id=${c.contractId}"
+                                       class="btn btn-sm btn-outline-accent">
+                                        <i class="bi bi-eye me-1"></i>Chi tiet
+                                    </a>
+                                    <!-- Cancel button: only show for cancellable statuses -->
+                                    <c:if test="${c.status == 'PENDING_REVIEW' || c.status == 'ACCEPTED'}">
+                                        <form method="post" action="${pageContext.request.contextPath}/my-contracts" class="d-inline"
+                                              onsubmit="return confirm('Ban co chac chan muon huy hop dong ${c.contractCode}?\n\nHanh dong nay khong the hoan tac!')">
+                                            <input type="hidden" name="action" value="cancel">
+                                            <input type="hidden" name="contractId" value="${c.contractId}">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                <i class="bi bi-x-circle me-1"></i>Huy
+                                            </button>
+                                        </form>
+                                    </c:if>
+                                    <c:if test="${c.status == 'CAR_PICKED_UP'}">
+                                        <span class="text-muted small"><i class="bi bi-lock me-1"></i>Dang thue</span>
+                                    </c:if>
+                                </div>
                             </td>
                         </tr>
                     </c:forEach>
