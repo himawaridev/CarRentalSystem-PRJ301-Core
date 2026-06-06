@@ -9,9 +9,15 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
 import java.io.IOException;
 import java.util.List;
+import java.util.Set;
 
 @WebServlet("/my-contracts")
 public class CustomerContractsServlet extends HttpServlet {
+
+    // Statuses where customer can cancel (before payment/pickup)
+    private static final Set<String> CANCELLABLE = Set.of(
+        "PENDING_REVIEW", "ACCEPTED", "DEPOSIT_PAID"
+    );
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -30,11 +36,43 @@ public class CustomerContractsServlet extends HttpServlet {
 
         // Flash messages
         String flash = (String) session.getAttribute("flashSuccess");
-        if (flash != null) {
-            request.setAttribute("success", flash);
-            session.removeAttribute("flashSuccess");
-        }
+        if (flash != null) { request.setAttribute("success", flash); session.removeAttribute("flashSuccess"); }
+        String err = (String) session.getAttribute("flashError");
+        if (err != null) { request.setAttribute("error", err); session.removeAttribute("flashError"); }
 
         request.getRequestDispatcher("/WEB-INF/views/my-contracts.jsp").forward(request, response);
+    }
+
+    @Override
+    protected void doPost(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        HttpSession session = request.getSession();
+        User user = (User) session.getAttribute("loggedInUser");
+        String action = request.getParameter("action");
+
+        if ("cancel".equals(action)) {
+            long contractId = Long.parseLong(request.getParameter("contractId"));
+
+            // Verify this contract belongs to the logged-in customer
+            ContractDAO contractDAO = new ContractDAO();
+            Contract contract = contractDAO.getContractById(contractId);
+
+            UserDAO userDAO = new UserDAO();
+            Integer customerId = userDAO.getCustomerIdByUserId(user.getUserId());
+
+            if (contract == null || customerId == null || contract.getCustomerId() != customerId) {
+                session.setAttribute("flashError", "Khong tim thay hop dong hoac ban khong co quyen huy!");
+            } else if (!CANCELLABLE.contains(contract.getStatus())) {
+                session.setAttribute("flashError",
+                    "Khong the huy hop dong o trang thai \"" + contract.getStatus()
+                    + "\". Chi co the huy khi chua nhan xe.");
+            } else {
+                boolean ok = contractDAO.updateContractStatus(contractId, "CANCELLED", user.getUserId());
+                session.setAttribute(ok ? "flashSuccess" : "flashError",
+                    ok ? "Da huy hop dong " + contract.getContractCode() + " thanh cong!"
+                       : "Huy hop dong that bai! Vui long thu lai.");
+            }
+        }
+        response.sendRedirect(request.getContextPath() + "/my-contracts");
     }
 }

@@ -9,6 +9,9 @@
     <c:if test="${not empty success}">
         <div class="alert alert-custom-success">${success}</div>
     </c:if>
+    <c:if test="${not empty error}">
+        <div class="alert alert-custom-error">${error}</div>
+    </c:if>
 
     <c:if test="${empty contracts}">
         <div class="text-center py-5">
@@ -32,6 +35,7 @@
                         <th>Tong tien</th>
                         <th>Trang thai</th>
                         <th>Ngay tao</th>
+                        <th></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -56,10 +60,29 @@
                                 </c:choose>
                             </td>
                             <td class="text-muted small">${c.createdAt}</td>
+                            <td>
+                                <!-- Cancel button: only show for cancellable statuses -->
+                                <c:if test="${c.status == 'PENDING_REVIEW' || c.status == 'ACCEPTED' || c.status == 'DEPOSIT_PAID'}">
+                                    <form method="post" action="${pageContext.request.contextPath}/my-contracts"
+                                          onsubmit="return confirm('Ban co chac chan muon huy hop dong ${c.contractCode}?\n\nHanh dong nay khong the hoan tac!')">
+                                        <input type="hidden" name="action" value="cancel">
+                                        <input type="hidden" name="contractId" value="${c.contractId}">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                            <i class="bi bi-x-circle me-1"></i>Huy
+                                        </button>
+                                    </form>
+                                </c:if>
+                                <c:if test="${c.status == 'CAR_PICKED_UP'}">
+                                    <span class="text-muted small"><i class="bi bi-lock me-1"></i>Dang thue</span>
+                                </c:if>
+                            </td>
                         </tr>
                     </c:forEach>
                 </tbody>
             </table>
+        </div>
+        <div class="text-muted small mt-2">
+            <i class="bi bi-info-circle me-1"></i>Ban co the huy hop dong khi chua nhan xe (Cho duyet / Da duyet / Da dat coc).
         </div>
     </c:if>
 </div>
