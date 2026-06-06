@@ -219,13 +219,25 @@
                                 </c:if>
                             </div>
                             <c:if test="${d.requiresDriver}">
-                                <form method="post" action="${pageContext.request.contextPath}/manager/dashboard" class="d-flex gap-2">
+                                <form method="post" action="${pageContext.request.contextPath}/manager/dashboard" class="d-flex gap-2 align-items-center"
+                                      onsubmit="return validateDriverSelect(this)">
                                     <input type="hidden" name="action" value="assignDriver">
                                     <input type="hidden" name="contractDetailId" value="${d.contractDetailId}">
-                                    <select name="driverId" class="form-select form-select-sm" style="width:200px" required>
-                                        <option value="">Chon tai xe</option>
+                                    <select name="driverId" class="form-select form-select-sm" style="width:260px" required>
+                                        <option value="">-- Chon tai xe --</option>
                                         <c:forEach var="dr" items="${drivers}">
-                                            <option value="${dr.driverId}">${dr.fullName} (${dr.licenseClass})</option>
+                                            <c:choose>
+                                                <c:when test="${dr.busy}">
+                                                    <option value="${dr.driverId}" data-busy="true" style="color:#dc2626">
+                                                        ${dr.fullName} (${dr.licenseClass}) - DA NHAN XE
+                                                    </option>
+                                                </c:when>
+                                                <c:otherwise>
+                                                    <option value="${dr.driverId}" data-busy="false" style="color:#059669">
+                                                        ${dr.fullName} (${dr.licenseClass}) - Ranh
+                                                    </option>
+                                                </c:otherwise>
+                                            </c:choose>
                                         </c:forEach>
                                     </select>
                                     <button class="btn btn-sm btn-accent">Gan</button>
@@ -239,5 +251,17 @@
         </c:if>
     </c:if>
 </div>
+
+<script>
+function validateDriverSelect(form) {
+    var select = form.querySelector('select[name="driverId"]');
+    var selected = select.options[select.selectedIndex];
+    if (!selected || !selected.value) return false;
+    if (selected.getAttribute('data-busy') === 'true') {
+        return confirm('Tai xe nay dang trong trang thai DA NHAN XE (dang ban).\n\nBan co chac chan muon gan tai xe nay khong?\nNeu tai xe bi trung lich, he thong se tu choi.');
+    }
+    return true;
+}
+</script>
 
 <jsp:include page="/WEB-INF/includes/footer.jsp"/>

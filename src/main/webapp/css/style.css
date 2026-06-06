@@ -960,6 +960,151 @@ a.text-accent:hover {
 }
 
 /* ========================================================================
+   CAR CATALOG PAGE
+   ======================================================================== */
+.catalog-hero {
+    background: linear-gradient(135deg, #0f172a, #1e3a5f);
+    padding: 48px 0 56px;
+    text-align: center;
+    color: var(--white);
+}
+.catalog-hero-title {
+    font-size: 2.2rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    margin-bottom: 8px;
+}
+.catalog-hero-sub {
+    color: #94a3b8;
+    font-size: 1rem;
+    margin: 0;
+}
+.catalog-filter-bar {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 20px 24px;
+    box-shadow: var(--shadow-sm);
+}
+.catalog-card {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    transition: var(--transition-slow);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+.catalog-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--primary-200);
+}
+.catalog-card-visual {
+    background: linear-gradient(135deg, #f0f4ff, #e0e7ff);
+    text-align: center;
+    padding: 32px 20px;
+    position: relative;
+}
+.catalog-card-visual > i {
+    font-size: 4.5rem;
+    color: var(--primary);
+    opacity: 0.35;
+}
+.catalog-status {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.02em;
+}
+.catalog-status-available {
+    background: #dcfce7;
+    color: #15803d;
+    border: 1px solid #86efac;
+}
+.catalog-status-maintenance {
+    background: #fef3c7;
+    color: #b45309;
+    border: 1px solid #fcd34d;
+}
+.catalog-status-other {
+    background: var(--gray-100);
+    color: var(--gray-600);
+    border: 1px solid var(--gray-300);
+}
+.catalog-card-body {
+    padding: 20px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+.catalog-car-name {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin-bottom: 2px;
+}
+.catalog-plate {
+    font-size: 0.8rem;
+    color: var(--gray-500);
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    margin-bottom: 14px;
+}
+.catalog-specs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+.catalog-spec {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    color: var(--gray-600);
+}
+.catalog-spec i {
+    color: var(--primary);
+    font-size: 0.85rem;
+    width: 16px;
+    text-align: center;
+}
+.catalog-desc {
+    font-size: 0.8rem;
+    color: var(--gray-500);
+    line-height: 1.5;
+    margin-bottom: 14px;
+}
+.catalog-price-bar {
+    margin-top: auto;
+    padding-top: 14px;
+    border-top: 1px solid var(--gray-200);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.catalog-price {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: var(--primary);
+}
+.catalog-price small {
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: var(--gray-500);
+}
+.catalog-deposit {
+    font-size: 0.75rem;
+    color: var(--gray-500);
+}
+
+/* ========================================================================
    FOOTER — Dark premium style
    ======================================================================== */
 footer.site-footer {

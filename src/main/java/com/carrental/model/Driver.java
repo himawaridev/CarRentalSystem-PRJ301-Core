@@ -52,4 +52,9 @@ public class Driver {
 
     public String getPhone() { return phone; }
     public void setPhone(String phone) { this.phone = phone; }
+
+    // Availability status (transient, set by DAO query)
+    private boolean busy;
+    public boolean isBusy() { return busy; }
+    public void setBusy(boolean busy) { this.busy = busy; }
 }

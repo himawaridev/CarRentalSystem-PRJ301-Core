@@ -22,6 +22,41 @@ public class DriverDAO {
         return list;
     }
 
+    /**
+     * Get active drivers with busy/free status for a specific contract date range.
+     * Drivers who have assignments overlapping with the given date range are marked busy.
+     */
+    public List<Driver> getDriversWithAvailability(java.time.LocalDateTime pickupAt, java.time.LocalDateTime returnAt) {
+        List<Driver> list = new ArrayList<>();
+        String sql = "SELECT d.*, u.FullName, u.Phone, "
+            + "CASE WHEN EXISTS ("
+            + "  SELECT 1 FROM dbo.Driver_Assignments da "
+            + "  INNER JOIN dbo.Contract_Details cd ON da.ContractDetailID = cd.ContractDetailID "
+            + "  INNER JOIN dbo.Contracts c ON cd.ContractID = c.ContractID "
+            + "  WHERE da.DriverID = d.DriverID "
+            + "    AND da.AssignmentStatus NOT IN (N'CANCELLED', N'TRIP_COMPLETED') "
+            + "    AND c.Status NOT IN (N'CANCELLED', N'REJECTED', N'FINAL_PAYMENT_COMPLETED') "
+            + "    AND c.PickupAt < ? AND c.ReturnAt > ? "
+            + ") THEN 1 ELSE 0 END AS IsBusy "
+            + "FROM dbo.Drivers d "
+            + "INNER JOIN dbo.Users u ON d.UserID = u.UserID "
+            + "WHERE d.EmploymentStatus = N'ACTIVE' "
+            + "ORDER BY IsBusy ASC, u.FullName";
+        try (Connection conn = DBContext.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setTimestamp(1, Timestamp.valueOf(returnAt));
+            ps.setTimestamp(2, Timestamp.valueOf(pickupAt));
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Driver d = mapDriver(rs);
+                    d.setBusy(rs.getInt("IsBusy") == 1);
+                    list.add(d);
+                }
+            }
+        } catch (SQLException e) { e.printStackTrace(); }
+        return list;
+    }
+
     public boolean assignDriver(long contractDetailId, int driverId, int assignedByUserId) {
         String sql = "INSERT INTO dbo.Driver_Assignments (ContractDetailID,DriverID,AssignedByUserID) VALUES (?,?,?)";
         try (Connection conn = DBContext.getConnection();

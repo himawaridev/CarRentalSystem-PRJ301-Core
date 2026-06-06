@@ -28,15 +28,26 @@ public class ManagerDashboardServlet extends HttpServlet {
         }
         if ("assign".equals(tab)) {
             String contractIdStr = request.getParameter("contractId");
+            ContractDAO contractDAO = new ContractDAO();
+            DriverDAO driverDAO = new DriverDAO();
+
             if (contractIdStr != null) {
                 long cid = Long.parseLong(contractIdStr);
-                ContractDAO contractDAO = new ContractDAO();
-                request.setAttribute("contract", contractDAO.getContractById(cid));
+                Contract contract = contractDAO.getContractById(cid);
+                request.setAttribute("contract", contract);
                 request.setAttribute("details", contractDAO.getDetailsByContractId(cid));
+
+                // Get drivers with availability status for this contract's date range
+                if (contract != null && contract.getPickupAt() != null && contract.getReturnAt() != null) {
+                    request.setAttribute("drivers", driverDAO.getDriversWithAvailability(
+                            contract.getPickupAt(), contract.getReturnAt()));
+                } else {
+                    request.setAttribute("drivers", driverDAO.getActiveDrivers());
+                }
+            } else {
+                request.setAttribute("drivers", driverDAO.getActiveDrivers());
             }
-            DriverDAO driverDAO = new DriverDAO();
-            request.setAttribute("drivers", driverDAO.getActiveDrivers());
-            ContractDAO contractDAO = new ContractDAO();
+
             request.setAttribute("acceptedContracts", contractDAO.getContractsByStatus("ACCEPTED"));
         }
 
