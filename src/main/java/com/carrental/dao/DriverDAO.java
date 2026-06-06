@@ -57,6 +57,78 @@ public class DriverDAO {
         return list;
     }
 
+    /**
+     * Get all active (non-cancelled, non-completed) driver assignments.
+     */
+    public List<DriverAssignment> getActiveAssignments() {
+        List<DriverAssignment> list = new ArrayList<>();
+        String sql = "SELECT da.*, u.FullName AS DriverName, "
+            + "c.Brand AS CarBrand, c.Model AS CarModel, c.LicensePlate, "
+            + "con.ContractCode, con.PickupAt, con.ReturnAt, "
+            + "cu.CustomerID, u2.FullName AS CustomerName "
+            + "FROM dbo.Driver_Assignments da "
+            + "INNER JOIN dbo.Drivers dr ON da.DriverID = dr.DriverID "
+            + "INNER JOIN dbo.Users u ON dr.UserID = u.UserID "
+            + "INNER JOIN dbo.Contract_Details cd ON da.ContractDetailID = cd.ContractDetailID "
+            + "INNER JOIN dbo.Cars c ON cd.CarID = c.CarID "
+            + "INNER JOIN dbo.Contracts con ON cd.ContractID = con.ContractID "
+            + "INNER JOIN dbo.Customers cu ON con.CustomerID = cu.CustomerID "
+            + "INNER JOIN dbo.Users u2 ON cu.UserID = u2.UserID "
+            + "WHERE da.AssignmentStatus NOT IN (N'CANCELLED', N'TRIP_COMPLETED') "
+            + "AND con.Status NOT IN (N'CANCELLED', N'REJECTED', N'FINAL_PAYMENT_COMPLETED') "
+            + "ORDER BY con.PickupAt DESC";
+        try (Connection conn = DBContext.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                DriverAssignment a = new DriverAssignment();
+                a.setAssignmentId(rs.getLong("AssignmentID"));
+                a.setContractDetailId(rs.getLong("ContractDetailID"));
+                a.setDriverId(rs.getInt("DriverID"));
+                a.setAssignmentStatus(rs.getString("AssignmentStatus"));
+                a.setDriverNote(rs.getString("DriverNote"));
+                a.setCarBrand(rs.getString("CarBrand"));
+                a.setCarModel(rs.getString("CarModel"));
+                a.setLicensePlate(rs.getString("LicensePlate"));
+                a.setContractCode(rs.getString("ContractCode"));
+                a.setCustomerName(rs.getString("CustomerName"));
+                Timestamp p = rs.getTimestamp("PickupAt");
+                if (p != null) a.setPickupAt(p.toLocalDateTime());
+                Timestamp r = rs.getTimestamp("ReturnAt");
+                if (r != null) a.setReturnAt(r.toLocalDateTime());
+                // Store driver name in driverNote temporarily (reuse field)
+                a.setDriverName(rs.getString("DriverName"));
+                list.add(a);
+            }
+        } catch (SQLException e) { e.printStackTrace(); }
+        return list;
+    }
+
+    /**
+     * Check if a contract detail already has a driver assigned (non-cancelled).
+     */
+    public DriverAssignment getAssignmentByDetailId(long contractDetailId) {
+        String sql = "SELECT da.*, u.FullName AS DriverName FROM dbo.Driver_Assignments da "
+            + "INNER JOIN dbo.Drivers dr ON da.DriverID = dr.DriverID "
+            + "INNER JOIN dbo.Users u ON dr.UserID = u.UserID "
+            + "WHERE da.ContractDetailID = ? AND da.AssignmentStatus <> N'CANCELLED'";
+        try (Connection conn = DBContext.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setLong(1, contractDetailId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    DriverAssignment a = new DriverAssignment();
+                    a.setAssignmentId(rs.getLong("AssignmentID"));
+                    a.setDriverId(rs.getInt("DriverID"));
+                    a.setAssignmentStatus(rs.getString("AssignmentStatus"));
+                    a.setDriverName(rs.getString("DriverName"));
+                    return a;
+                }
+            }
+        } catch (SQLException e) { e.printStackTrace(); }
+        return null;
+    }
+
     public boolean assignDriver(long contractDetailId, int driverId, int assignedByUserId) {
         String sql = "INSERT INTO dbo.Driver_Assignments (ContractDetailID,DriverID,AssignedByUserID) VALUES (?,?,?)";
         try (Connection conn = DBContext.getConnection();

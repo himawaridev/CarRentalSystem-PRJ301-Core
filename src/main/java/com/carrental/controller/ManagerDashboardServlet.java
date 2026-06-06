@@ -35,7 +35,19 @@ public class ManagerDashboardServlet extends HttpServlet {
                 long cid = Long.parseLong(contractIdStr);
                 Contract contract = contractDAO.getContractById(cid);
                 request.setAttribute("contract", contract);
-                request.setAttribute("details", contractDAO.getDetailsByContractId(cid));
+
+                var details = contractDAO.getDetailsByContractId(cid);
+                request.setAttribute("details", details);
+
+                // Check existing assignments for each detail
+                java.util.Map<Long, com.carrental.model.DriverAssignment> existingAssignments = new java.util.HashMap<>();
+                for (var d : details) {
+                    var existing = driverDAO.getAssignmentByDetailId(d.getContractDetailId());
+                    if (existing != null) {
+                        existingAssignments.put(d.getContractDetailId(), existing);
+                    }
+                }
+                request.setAttribute("existingAssignments", existingAssignments);
 
                 // Get drivers with availability status for this contract's date range
                 if (contract != null && contract.getPickupAt() != null && contract.getReturnAt() != null) {
@@ -49,6 +61,9 @@ public class ManagerDashboardServlet extends HttpServlet {
             }
 
             request.setAttribute("acceptedContracts", contractDAO.getContractsByStatus("ACCEPTED"));
+
+            // Active assignments table
+            request.setAttribute("activeAssignments", driverDAO.getActiveAssignments());
         }
 
         request.setAttribute("tab", tab);

@@ -82,4 +82,9 @@ public class DriverAssignment {
 
     public String getContractCode() { return contractCode; }
     public void setContractCode(String contractCode) { this.contractCode = contractCode; }
+
+    // Driver name (joined from Users)
+    private String driverName;
+    public String getDriverName() { return driverName; }
+    public void setDriverName(String driverName) { this.driverName = driverName; }
 }

@@ -203,12 +203,12 @@
         </c:if>
 
         <c:if test="${not empty details}">
-        <div class="card-custom">
+        <div class="card-custom mb-4">
             <div class="card-header">Hop dong: ${contract.contractCode} | ${contract.customerName}</div>
             <div class="card-body">
                 <c:forEach var="d" items="${details}">
                     <div class="car-card mb-2">
-                        <div class="d-flex justify-content-between align-items-center">
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                             <div>
                                 <strong>${d.carBrand} ${d.carModel}</strong> - ${d.licensePlate}
                                 <c:if test="${d.requiresDriver}">
@@ -219,35 +219,105 @@
                                 </c:if>
                             </div>
                             <c:if test="${d.requiresDriver}">
-                                <form method="post" action="${pageContext.request.contextPath}/manager/dashboard" class="d-flex gap-2 align-items-center"
-                                      onsubmit="return validateDriverSelect(this)">
-                                    <input type="hidden" name="action" value="assignDriver">
-                                    <input type="hidden" name="contractDetailId" value="${d.contractDetailId}">
-                                    <select name="driverId" class="form-select form-select-sm" style="width:260px" required>
-                                        <option value="">-- Chon tai xe --</option>
-                                        <c:forEach var="dr" items="${drivers}">
-                                            <c:choose>
-                                                <c:when test="${dr.busy}">
-                                                    <option value="${dr.driverId}" data-busy="true" style="color:#dc2626">
-                                                        ${dr.fullName} (${dr.licenseClass}) - DA NHAN XE
-                                                    </option>
-                                                </c:when>
-                                                <c:otherwise>
-                                                    <option value="${dr.driverId}" data-busy="false" style="color:#059669">
-                                                        ${dr.fullName} (${dr.licenseClass}) - Ranh
-                                                    </option>
-                                                </c:otherwise>
-                                            </c:choose>
-                                        </c:forEach>
-                                    </select>
-                                    <button class="btn btn-sm btn-accent">Gan</button>
-                                </form>
+                                <c:set var="existingA" value="${existingAssignments[d.contractDetailId]}" />
+                                <c:choose>
+                                    <c:when test="${not empty existingA}">
+                                        <!-- Already has driver -->
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="badge-status badge-accepted">
+                                                <i class="bi bi-person-check me-1"></i>Da gan: ${existingA.driverName}
+                                            </span>
+                                            <span class="text-muted small">(${existingA.assignmentStatus})</span>
+                                        </div>
+                                    </c:when>
+                                    <c:otherwise>
+                                        <!-- Assign form -->
+                                        <form method="post" action="${pageContext.request.contextPath}/manager/dashboard" class="d-flex gap-2 align-items-center"
+                                              onsubmit="return validateDriverSelect(this)">
+                                            <input type="hidden" name="action" value="assignDriver">
+                                            <input type="hidden" name="contractDetailId" value="${d.contractDetailId}">
+                                            <input type="hidden" name="contractId" value="${contract.contractId}">
+                                            <select name="driverId" class="form-select form-select-sm" style="width:260px" required>
+                                                <option value="">-- Chon tai xe --</option>
+                                                <c:forEach var="dr" items="${drivers}">
+                                                    <c:choose>
+                                                        <c:when test="${dr.busy}">
+                                                            <option value="${dr.driverId}" data-busy="true" style="color:#dc2626">
+                                                                ${dr.fullName} (${dr.licenseClass}) - DANG BAN
+                                                            </option>
+                                                        </c:when>
+                                                        <c:otherwise>
+                                                            <option value="${dr.driverId}" data-busy="false" style="color:#059669">
+                                                                ${dr.fullName} (${dr.licenseClass}) - Ranh
+                                                            </option>
+                                                        </c:otherwise>
+                                                    </c:choose>
+                                                </c:forEach>
+                                            </select>
+                                            <button class="btn btn-sm btn-accent">Gan</button>
+                                        </form>
+                                    </c:otherwise>
+                                </c:choose>
                             </c:if>
                         </div>
                     </div>
                 </c:forEach>
             </div>
         </div>
+        </c:if>
+
+        <!-- Active assignments table -->
+        <c:if test="${not empty activeAssignments}">
+        <h5 class="mt-4 mb-3"><i class="bi bi-people me-2"></i>Danh sach tai xe dang hoat dong</h5>
+        <div class="table-responsive">
+            <table class="table table-custom">
+                <thead>
+                    <tr>
+                        <th>Tai xe</th>
+                        <th>Xe</th>
+                        <th>Bien so</th>
+                        <th>Hop dong</th>
+                        <th>Khach hang</th>
+                        <th>Nhan xe</th>
+                        <th>Tra xe</th>
+                        <th>Trang thai</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <c:forEach var="a" items="${activeAssignments}">
+                        <tr>
+                            <td><strong>${a.driverName}</strong></td>
+                            <td>${a.carBrand} ${a.carModel}</td>
+                            <td><span class="fw-bold">${a.licensePlate}</span></td>
+                            <td><span class="text-accent">${a.contractCode}</span></td>
+                            <td>${a.customerName}</td>
+                            <td class="small">${a.pickupAt}</td>
+                            <td class="small">${a.returnAt}</td>
+                            <td>
+                                <c:choose>
+                                    <c:when test="${a.assignmentStatus == 'ASSIGNED'}">
+                                        <span class="badge-status badge-pending">Cho nhan xe</span>
+                                    </c:when>
+                                    <c:when test="${a.assignmentStatus == 'HANDOVER_RECEIVED'}">
+                                        <span class="badge-status badge-picked">Dang lai</span>
+                                    </c:when>
+                                    <c:otherwise>
+                                        <span class="badge-status badge-deposit">${a.assignmentStatus}</span>
+                                    </c:otherwise>
+                                </c:choose>
+                            </td>
+                        </tr>
+                    </c:forEach>
+                </tbody>
+            </table>
+        </div>
+        </c:if>
+
+        <c:if test="${empty activeAssignments}">
+            <div class="text-center py-4 text-muted">
+                <i class="bi bi-person-x" style="font-size:2.5rem;opacity:.3"></i>
+                <p class="mt-2">Chua co tai xe nao duoc gan.</p>
+            </div>
         </c:if>
     </c:if>
 </div>
@@ -258,7 +328,7 @@ function validateDriverSelect(form) {
     var selected = select.options[select.selectedIndex];
     if (!selected || !selected.value) return false;
     if (selected.getAttribute('data-busy') === 'true') {
-        return confirm('Tai xe nay dang trong trang thai DA NHAN XE (dang ban).\n\nBan co chac chan muon gan tai xe nay khong?\nNeu tai xe bi trung lich, he thong se tu choi.');
+        return confirm('Tai xe nay DANG BAN (da nhan xe khac).\n\nBan co chac chan muon gan tai xe nay khong?\nNeu tai xe bi trung lich, he thong se tu choi.');
     }
     return true;
 }
