@@ -181,9 +181,9 @@ CREATE TABLE dbo.Contracts (
     CustomerID INT NOT NULL,
     PickupAt DATETIME2(0) NOT NULL,
     ReturnAt DATETIME2(0) NOT NULL,
-    PickupLocation NVARCHAR(255) NULL,
-    ReturnLocation NVARCHAR(255) NULL,
-    Status NVARCHAR(40) NOT NULL DEFAULT N'PENDING_REVIEW',
+    PickupLocation NVARCHAR(255) NOT NULL,
+    ReturnLocation NVARCHAR(255) NOT NULL,
+    Status NVARCHAR(40) NOT NULL DEFAULT N'PENDING_PAYMENT',
     ReviewedByUserID INT NULL,
     ReviewedAt DATETIME2(0) NULL,
     ReviewNote NVARCHAR(500) NULL,
@@ -204,14 +204,15 @@ CREATE TABLE dbo.Contracts (
     ),
     CONSTRAINT CK_Contracts_Status CHECK (
         Status IN (
-            N'PENDING_REVIEW',
-            N'ACCEPTED',
-            N'REJECTED',
-            N'DEPOSIT_PAID',
+            N'PENDING_PAYMENT',
+            N'PAYMENT_EXPIRED',
+            N'RESERVED',
+            N'CONFIRMED',
+            N'CANCELLED',
             N'CAR_PICKED_UP',
             N'CAR_RETURNED',
-            N'FINAL_PAYMENT_COMPLETED',
-            N'CANCELLED'
+            N'SETTLEMENT_PENDING',
+            N'COMPLETED'
         )
     )
 );
@@ -308,13 +309,65 @@ CREATE TABLE dbo.Car_Handovers (
     )
 );
 
+CREATE TABLE dbo.Payment_Transactions (
+    PaymentTransactionID BIGINT IDENTITY(1,1) PRIMARY KEY,
+    ContractID BIGINT NOT NULL,
+    Provider NVARCHAR(40) NOT NULL,
+    ProviderTransactionRef NVARCHAR(100) NOT NULL UNIQUE,
+    ProviderOrderCode BIGINT NULL,
+    ProviderPaymentRef NVARCHAR(100) NULL,
+    Amount DECIMAL(12,2) NOT NULL,
+    Status NVARCHAR(30) NOT NULL DEFAULT N'PENDING',
+    QrPayload NVARCHAR(1000) NULL,
+    ProviderCheckoutUrl NVARCHAR(500) NULL,
+    ProviderQrCode NVARCHAR(MAX) NULL,
+    ExpiredAt DATETIME2(0) NULL,
+    PaidAt DATETIME2(0) NULL,
+    Metadata NVARCHAR(MAX) NULL,
+    CreatedAt DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
+    UpdatedAt DATETIME2(0) NULL,
+    CONSTRAINT FK_PaymentTransactions_Contracts FOREIGN KEY (ContractID)
+        REFERENCES dbo.Contracts(ContractID),
+    CONSTRAINT CK_PaymentTransactions_Amount CHECK (Amount > 0),
+    CONSTRAINT CK_PaymentTransactions_Status CHECK (
+        Status IN (
+            N'PENDING',
+            N'PAID',
+            N'FAILED',
+            N'EXPIRED',
+            N'REFUND_PENDING',
+            N'REFUNDED',
+            N'PARTIALLY_REFUNDED'
+        )
+    )
+);
+
+CREATE TABLE dbo.Payment_Webhook_Events (
+    WebhookEventID BIGINT IDENTITY(1,1) PRIMARY KEY,
+    Provider NVARCHAR(40) NOT NULL,
+    EventRef NVARCHAR(150) NOT NULL,
+    ProviderTransactionRef NVARCHAR(100) NULL,
+    Payload NVARCHAR(MAX) NULL,
+    Signature NVARCHAR(200) NULL,
+    ProcessingStatus NVARCHAR(30) NOT NULL DEFAULT N'RECEIVED',
+    ErrorMessage NVARCHAR(500) NULL,
+    CreatedAt DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
+    ProcessedAt DATETIME2(0) NULL,
+    CONSTRAINT UQ_PaymentWebhookEvents_Provider_EventRef UNIQUE (Provider, EventRef),
+    CONSTRAINT CK_PaymentWebhookEvents_Status CHECK (
+        ProcessingStatus IN (N'RECEIVED', N'PROCESSED', N'DUPLICATE', N'FAILED')
+    )
+);
+
 CREATE TABLE dbo.Payments (
     PaymentID BIGINT IDENTITY(1,1) PRIMARY KEY,
     ContractID BIGINT NOT NULL,
-    PaymentType NVARCHAR(20) NOT NULL,
+    PaymentTransactionID BIGINT NULL,
+    SourcePaymentID BIGINT NULL,
+    PaymentType NVARCHAR(30) NOT NULL,
     Amount DECIMAL(12,2) NOT NULL,
     PaymentMethod NVARCHAR(30) NOT NULL,
-    PaymentStatus NVARCHAR(20) NOT NULL DEFAULT N'PENDING',
+    PaymentStatus NVARCHAR(30) NOT NULL DEFAULT N'PENDING',
     PaidAt DATETIME2(0) NULL,
     ReceivedByUserID INT NULL,
     TransactionRef NVARCHAR(100) NULL,
@@ -322,17 +375,77 @@ CREATE TABLE dbo.Payments (
     CreatedAt DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
     CONSTRAINT FK_Payments_Contracts FOREIGN KEY (ContractID)
         REFERENCES dbo.Contracts(ContractID),
+    CONSTRAINT FK_Payments_PaymentTransactions FOREIGN KEY (PaymentTransactionID)
+        REFERENCES dbo.Payment_Transactions(PaymentTransactionID),
+    CONSTRAINT FK_Payments_SourcePayment FOREIGN KEY (SourcePaymentID)
+        REFERENCES dbo.Payments(PaymentID),
     CONSTRAINT FK_Payments_ReceivedBy FOREIGN KEY (ReceivedByUserID)
         REFERENCES dbo.Users(UserID),
     CONSTRAINT CK_Payments_Amount CHECK (Amount > 0),
     CONSTRAINT CK_Payments_Type CHECK (
-        PaymentType IN (N'DEPOSIT', N'FINAL', N'REFUND', N'OTHER')
+        PaymentType IN (
+            N'DEPOSIT',
+            N'RENTAL_PREPAID',
+            N'DRIVER_FEE_PREPAID',
+            N'RENTAL_BALANCE',
+            N'EXTRA_CHARGE',
+            N'REFUND'
+        )
     ),
     CONSTRAINT CK_Payments_Method CHECK (
         PaymentMethod IN (N'CASH', N'BANK_TRANSFER', N'CARD', N'E_WALLET', N'OTHER')
     ),
     CONSTRAINT CK_Payments_Status CHECK (
-        PaymentStatus IN (N'PENDING', N'PAID', N'FAILED', N'REFUNDED', N'CANCELLED')
+        PaymentStatus IN (
+            N'PENDING',
+            N'PAID',
+            N'FAILED',
+            N'EXPIRED',
+            N'REFUND_PENDING',
+            N'REFUNDED',
+            N'PARTIALLY_REFUNDED'
+        )
+    )
+);
+
+CREATE TABLE dbo.Refunds (
+    RefundID BIGINT IDENTITY(1,1) PRIMARY KEY,
+    ContractID BIGINT NOT NULL,
+    SourcePaymentID BIGINT NOT NULL,
+    DepositAmount DECIMAL(12,2) NOT NULL,
+    DeductionAmount DECIMAL(12,2) NOT NULL DEFAULT 0,
+    RefundAmount DECIMAL(12,2) NOT NULL,
+    Reason NVARCHAR(500) NULL,
+    RefundMethod NVARCHAR(30) NOT NULL DEFAULT N'GATEWAY_REFUND',
+    ProofOfRefund NVARCHAR(1000) NULL,
+    Status NVARCHAR(30) NOT NULL DEFAULT N'REFUND_PENDING',
+    ApprovedByUserID INT NULL,
+    CompletedByUserID INT NULL,
+    ProviderRefundRef NVARCHAR(100) NULL,
+    CompletedAt DATETIME2(0) NULL,
+    CreatedAt DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
+    UpdatedAt DATETIME2(0) NULL,
+    CONSTRAINT FK_Refunds_Contracts FOREIGN KEY (ContractID)
+        REFERENCES dbo.Contracts(ContractID),
+    CONSTRAINT FK_Refunds_SourcePayment FOREIGN KEY (SourcePaymentID)
+        REFERENCES dbo.Payments(PaymentID),
+    CONSTRAINT FK_Refunds_ApprovedBy FOREIGN KEY (ApprovedByUserID)
+        REFERENCES dbo.Users(UserID),
+    CONSTRAINT FK_Refunds_CompletedBy FOREIGN KEY (CompletedByUserID)
+        REFERENCES dbo.Users(UserID),
+    CONSTRAINT CK_Refunds_Amounts CHECK (
+        DepositAmount >= 0 AND DeductionAmount >= 0 AND RefundAmount >= 0
+    ),
+    CONSTRAINT CK_Refunds_Method CHECK (
+        RefundMethod IN (
+            N'GATEWAY_REFUND',
+            N'CASH_AT_COUNTER',
+            N'MANUAL_BANK_TRANSFER',
+            N'WALLET_CREDIT'
+        )
+    ),
+    CONSTRAINT CK_Refunds_Status CHECK (
+        Status IN (N'REFUND_PENDING', N'REFUNDED', N'FAILED')
     )
 );
 
@@ -365,6 +478,16 @@ ON dbo.Driver_Assignments(DriverID, AssignmentStatus);
 CREATE INDEX IX_Payments_Contract
 ON dbo.Payments(ContractID);
 
+CREATE INDEX IX_PaymentTransactions_Contract_Status
+ON dbo.Payment_Transactions(ContractID, Status);
+
+CREATE UNIQUE INDEX UX_PaymentTransactions_ProviderOrderCode
+ON dbo.Payment_Transactions(ProviderOrderCode)
+WHERE ProviderOrderCode IS NOT NULL;
+
+CREATE INDEX IX_Refunds_Contract
+ON dbo.Refunds(ContractID);
+
 CREATE INDEX IX_CarMaintenance_Car_Dates
 ON dbo.Car_Maintenance(CarID, StartAt, EndAt, Status);
 GO
@@ -386,8 +509,8 @@ BEGIN
         JOIN dbo.Contracts c2 ON cd2.ContractID = c2.ContractID
         WHERE i.DetailStatus <> N'CANCELLED'
           AND cd2.DetailStatus <> N'CANCELLED'
-          AND c1.Status IN (N'PENDING_REVIEW', N'ACCEPTED', N'DEPOSIT_PAID', N'CAR_PICKED_UP')
-          AND c2.Status IN (N'PENDING_REVIEW', N'ACCEPTED', N'DEPOSIT_PAID', N'CAR_PICKED_UP')
+          AND c1.Status IN (N'RESERVED', N'CONFIRMED', N'CAR_PICKED_UP')
+          AND c2.Status IN (N'RESERVED', N'CONFIRMED', N'CAR_PICKED_UP')
           AND c1.PickupAt < c2.ReturnAt
           AND c1.ReturnAt > c2.PickupAt
     )
@@ -416,8 +539,8 @@ BEGIN
             AND cd1.ContractDetailID <> cd2.ContractDetailID
             AND cd2.DetailStatus <> N'CANCELLED'
         JOIN dbo.Contracts c2 ON cd2.ContractID = c2.ContractID
-        WHERE c1.Status IN (N'PENDING_REVIEW', N'ACCEPTED', N'DEPOSIT_PAID', N'CAR_PICKED_UP')
-          AND c2.Status IN (N'PENDING_REVIEW', N'ACCEPTED', N'DEPOSIT_PAID', N'CAR_PICKED_UP')
+        WHERE c1.Status IN (N'RESERVED', N'CONFIRMED', N'CAR_PICKED_UP')
+          AND c2.Status IN (N'RESERVED', N'CONFIRMED', N'CAR_PICKED_UP')
           AND c1.PickupAt < c2.ReturnAt
           AND c1.ReturnAt > c2.PickupAt
     )
@@ -440,8 +563,8 @@ BEGIN
             AND da2.AssignmentStatus <> N'CANCELLED'
         JOIN dbo.Contract_Details cd2 ON da2.ContractDetailID = cd2.ContractDetailID
         JOIN dbo.Contracts c2 ON cd2.ContractID = c2.ContractID
-        WHERE c1.Status IN (N'PENDING_REVIEW', N'ACCEPTED', N'DEPOSIT_PAID', N'CAR_PICKED_UP')
-          AND c2.Status IN (N'PENDING_REVIEW', N'ACCEPTED', N'DEPOSIT_PAID', N'CAR_PICKED_UP')
+        WHERE c1.Status IN (N'RESERVED', N'CONFIRMED', N'CAR_PICKED_UP')
+          AND c2.Status IN (N'RESERVED', N'CONFIRMED', N'CAR_PICKED_UP')
           AND c1.PickupAt < c2.ReturnAt
           AND c1.ReturnAt > c2.PickupAt
     )
@@ -484,8 +607,8 @@ BEGIN
         JOIN dbo.Contract_Details cd2 ON da2.ContractDetailID = cd2.ContractDetailID
         JOIN dbo.Contracts c2 ON cd2.ContractID = c2.ContractID
         WHERE i.AssignmentStatus <> N'CANCELLED'
-          AND c1.Status IN (N'PENDING_REVIEW', N'ACCEPTED', N'DEPOSIT_PAID', N'CAR_PICKED_UP')
-          AND c2.Status IN (N'PENDING_REVIEW', N'ACCEPTED', N'DEPOSIT_PAID', N'CAR_PICKED_UP')
+          AND c1.Status IN (N'RESERVED', N'CONFIRMED', N'CAR_PICKED_UP')
+          AND c2.Status IN (N'RESERVED', N'CONFIRMED', N'CAR_PICKED_UP')
           AND c1.PickupAt < c2.ReturnAt
           AND c1.ReturnAt > c2.PickupAt
     )
@@ -512,6 +635,6 @@ VALUES
 
 INSERT INTO dbo.System_Settings (SettingKey, SettingValue, DataType, Description)
 VALUES
-(N'DEPOSIT_REQUIRED_ON_PICKUP', N'true', N'BOOLEAN', N'Deposit must be paid when the customer picks up the car'),
+(N'DEPOSIT_REQUIRED_BEFORE_RESERVATION', N'true', N'BOOLEAN', N'Deposit must be paid before the car is reserved'),
 (N'DEFAULT_CURRENCY', N'VND', N'STRING', N'Default display currency');
 GO
