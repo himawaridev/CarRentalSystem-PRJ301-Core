@@ -26,5 +26,12 @@ Thumbs.db
 # Logs
 *.log
 
+# Local tools
+tools/ngrok/
+
+# Local secrets
+config/payment-local.properties
+src/main/resources/payment-local.properties
+
 # Test utility (not needed in repo)
 src/main/java/com/carrental/config/TestDB.java
