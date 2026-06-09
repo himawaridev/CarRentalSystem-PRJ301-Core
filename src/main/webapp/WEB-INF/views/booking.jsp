@@ -42,7 +42,7 @@
                                 <div class="d-flex justify-content-between align-items-start">
                                     <div>
                                         <div class="car-brand">${car.brand} ${car.model}</div>
-                                        <div class="text-muted small">${car.licensePlate} | ${car.seatCount} cho | ${car.transmission}</div>
+                                        <div class="text-muted small">${car.seatCount} cho | ${car.transmission} | Con ${car.availableQuantity} xe cung mau</div>
                                     </div>
                                     <div class="car-price"><fmt:formatNumber value="${car.dailyRate}" pattern="#,###"/>/ngay</div>
                                 </div>
@@ -64,12 +64,42 @@
                             <div class="col-md-6">
                                 <label class="form-label">Dia diem nhan xe</label>
                                 <input type="text" name="pickupLocation" class="form-control"
+                                       value="${pickupLocation}"
+                                       maxlength="255" required
                                        placeholder="VD: 123 Nguyen Hue, Q1, HCM">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Dia diem tra xe</label>
                                 <input type="text" name="returnLocation" class="form-control"
+                                       value="${returnLocation}"
+                                       maxlength="255" required
                                        placeholder="VD: San bay Tan Son Nhat">
+                            </div>
+                        </div>
+
+                        <div class="divider"></div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="payment-option">
+                                    <input class="form-check-input" type="radio" name="paymentMode"
+                                           value="DEPOSIT_ONLY"
+                                           ${paymentMode != 'FULL_PREPAYMENT' ? 'checked' : ''}>
+                                    <span>
+                                        <strong>Thanh toan coc</strong>
+                                        <small>Giu xe truoc, tien thue thanh toan sau</small>
+                                    </span>
+                                </label>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="payment-option">
+                                    <input class="form-check-input" type="radio" name="paymentMode"
+                                           value="FULL_PREPAYMENT"
+                                           ${paymentMode == 'FULL_PREPAYMENT' ? 'checked' : ''}>
+                                    <span>
+                                        <strong>Thanh toan toan bo</strong>
+                                        <small>Coc + tien xe + phi tai xe neu co</small>
+                                    </span>
+                                </label>
                             </div>
                         </div>
 
@@ -78,7 +108,7 @@
                                 <i class="bi bi-arrow-left me-1"></i>Quay lai
                             </a>
                             <button type="submit" class="btn btn-accent px-4">
-                                <i class="bi bi-check-circle me-1"></i>Xac nhan dat xe
+                                <i class="bi bi-credit-card me-1"></i>Tiep tuc thanh toan
                             </button>
                         </div>
                     </form>
@@ -104,17 +134,25 @@
                         <span class="fw-bold"><fmt:formatNumber value="${totalRental}" pattern="#,###"/> VND</span>
                     </div>
                     <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted">Dat coc:</span>
+                        <span class="text-muted">Phi tai xe uoc tinh:</span>
+                        <span class="fw-bold"><fmt:formatNumber value="${totalDriverFee}" pattern="#,###"/> VND</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="text-muted">Dat coc bat buoc:</span>
                         <span class="text-warning fw-bold"><fmt:formatNumber value="${totalDeposit}" pattern="#,###"/> VND</span>
                     </div>
                     <div class="divider"></div>
-                    <div class="d-flex justify-content-between">
-                        <span class="fw-bold">Tong cong:</span>
-                        <span class="car-price"><fmt:formatNumber value="${totalRental}" pattern="#,###"/> VND</span>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span class="fw-bold">Can thanh toan de giu xe:</span>
+                        <span class="car-price"><fmt:formatNumber value="${totalDeposit}" pattern="#,###"/> VND</span>
+                    </div>
+                    <div class="d-flex justify-content-between small text-muted">
+                        <span>Neu tra toan bo:</span>
+                        <span><fmt:formatNumber value="${fullPrepaymentTotal}" pattern="#,###"/> VND</span>
                     </div>
                     <div class="mt-3 p-2 bg-accent-soft rounded text-center small">
                         <i class="bi bi-info-circle me-1 text-accent"></i>
-                        Dat coc khi den nhan xe. Hop dong can duoc nhan vien duyet truoc.
+                        He thong chi giu xe sau khi thanh toan coc thanh cong.
                     </div>
                 </div>
             </div>

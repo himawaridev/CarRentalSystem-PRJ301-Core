@@ -48,13 +48,14 @@
                             <td><fmt:formatNumber value="${c.finalAmountDue}" pattern="#,###"/></td>
                             <td>
                                 <c:choose>
-                                    <c:when test="${c.status == 'PENDING_REVIEW'}"><span class="badge-status badge-pending">Cho duyet</span></c:when>
-                                    <c:when test="${c.status == 'ACCEPTED'}"><span class="badge-status badge-accepted">Da duyet</span></c:when>
-                                    <c:when test="${c.status == 'REJECTED'}"><span class="badge-status badge-rejected">Tu choi</span></c:when>
-                                    <c:when test="${c.status == 'DEPOSIT_PAID'}"><span class="badge-status badge-deposit">Da dat coc</span></c:when>
+                                    <c:when test="${c.status == 'PENDING_PAYMENT'}"><span class="badge-status badge-pending">Cho thanh toan</span></c:when>
+                                    <c:when test="${c.status == 'PAYMENT_EXPIRED'}"><span class="badge-status badge-rejected">Het han</span></c:when>
+                                    <c:when test="${c.status == 'RESERVED'}"><span class="badge-status badge-deposit">Da giu xe</span></c:when>
+                                    <c:when test="${c.status == 'CONFIRMED'}"><span class="badge-status badge-accepted">Da xac nhan</span></c:when>
                                     <c:when test="${c.status == 'CAR_PICKED_UP'}"><span class="badge-status badge-picked">Da nhan xe</span></c:when>
                                     <c:when test="${c.status == 'CAR_RETURNED'}"><span class="badge-status badge-returned">Da tra xe</span></c:when>
-                                    <c:when test="${c.status == 'FINAL_PAYMENT_COMPLETED'}"><span class="badge-status badge-completed">Hoan tat</span></c:when>
+                                    <c:when test="${c.status == 'SETTLEMENT_PENDING'}"><span class="badge-status badge-pending">Dang quyet toan</span></c:when>
+                                    <c:when test="${c.status == 'COMPLETED'}"><span class="badge-status badge-completed">Hoan tat</span></c:when>
                                     <c:when test="${c.status == 'CANCELLED'}"><span class="badge-status badge-cancelled">Da huy</span></c:when>
                                     <c:otherwise><span class="badge bg-secondary">${c.status}</span></c:otherwise>
                                 </c:choose>
@@ -66,8 +67,14 @@
                                        class="btn btn-sm btn-outline-accent">
                                         <i class="bi bi-eye me-1"></i>Chi tiet
                                     </a>
+                                    <c:if test="${c.status == 'PENDING_PAYMENT' && not empty pendingPaymentRefs[c.contractId]}">
+                                        <a href="${pageContext.request.contextPath}/payment/pending?ref=${pendingPaymentRefs[c.contractId]}"
+                                           class="btn btn-sm btn-accent">
+                                            <i class="bi bi-credit-card me-1"></i>Thanh toan
+                                        </a>
+                                    </c:if>
                                     <!-- Cancel button: only show for cancellable statuses -->
-                                    <c:if test="${c.status == 'PENDING_REVIEW' || c.status == 'ACCEPTED'}">
+                                    <c:if test="${c.status == 'PENDING_PAYMENT'}">
                                         <form method="post" action="${pageContext.request.contextPath}/my-contracts" class="d-inline"
                                               onsubmit="return confirm('Ban co chac chan muon huy hop dong ${c.contractCode}?\n\nHanh dong nay khong the hoan tac!')">
                                             <input type="hidden" name="action" value="cancel">
@@ -88,7 +95,7 @@
             </table>
         </div>
         <div class="text-muted small mt-2">
-            <i class="bi bi-info-circle me-1"></i>Ban co the huy hop dong khi chua nhan xe (Cho duyet / Da duyet / Da dat coc).
+            <i class="bi bi-info-circle me-1"></i>Ban co the huy don khi chua thanh toan coc. Sau khi da giu xe, vui long lien he nhan vien de xu ly huy/hoan coc.
         </div>
     </c:if>
 </div>

@@ -49,10 +49,14 @@ public class Contract {
     public void setReturnAt(LocalDateTime returnAt) { this.returnAt = returnAt; }
 
     public String getPickupLocation() { return pickupLocation; }
-    public void setPickupLocation(String pickupLocation) { this.pickupLocation = pickupLocation; }
+    public void setPickupLocation(String pickupLocation) {
+        this.pickupLocation = pickupLocation == null ? null : pickupLocation.trim();
+    }
 
     public String getReturnLocation() { return returnLocation; }
-    public void setReturnLocation(String returnLocation) { this.returnLocation = returnLocation; }
+    public void setReturnLocation(String returnLocation) {
+        this.returnLocation = returnLocation == null ? null : returnLocation.trim();
+    }
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }

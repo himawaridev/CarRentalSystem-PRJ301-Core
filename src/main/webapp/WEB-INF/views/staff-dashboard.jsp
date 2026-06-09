@@ -18,16 +18,18 @@
         <div class="d-flex flex-wrap gap-2">
             <a href="${pageContext.request.contextPath}/staff/dashboard"
                class="btn ${empty statusFilter ? 'btn-accent' : 'btn-outline-accent'} btn-sm">Tat ca</a>
-            <a href="${pageContext.request.contextPath}/staff/dashboard?status=PENDING_REVIEW"
-               class="btn ${statusFilter == 'PENDING_REVIEW' ? 'btn-accent' : 'btn-outline-accent'} btn-sm">Cho duyet</a>
-            <a href="${pageContext.request.contextPath}/staff/dashboard?status=ACCEPTED"
-               class="btn ${statusFilter == 'ACCEPTED' ? 'btn-accent' : 'btn-outline-accent'} btn-sm">Da duyet</a>
-            <a href="${pageContext.request.contextPath}/staff/dashboard?status=DEPOSIT_PAID"
-               class="btn ${statusFilter == 'DEPOSIT_PAID' ? 'btn-accent' : 'btn-outline-accent'} btn-sm">Da dat coc</a>
+            <a href="${pageContext.request.contextPath}/staff/dashboard?status=PENDING_PAYMENT"
+               class="btn ${statusFilter == 'PENDING_PAYMENT' ? 'btn-accent' : 'btn-outline-accent'} btn-sm">Cho thanh toan</a>
+            <a href="${pageContext.request.contextPath}/staff/dashboard?status=RESERVED"
+               class="btn ${statusFilter == 'RESERVED' ? 'btn-accent' : 'btn-outline-accent'} btn-sm">Da giu xe</a>
+            <a href="${pageContext.request.contextPath}/staff/dashboard?status=CONFIRMED"
+               class="btn ${statusFilter == 'CONFIRMED' ? 'btn-accent' : 'btn-outline-accent'} btn-sm">Da xac nhan</a>
             <a href="${pageContext.request.contextPath}/staff/dashboard?status=CAR_PICKED_UP"
                class="btn ${statusFilter == 'CAR_PICKED_UP' ? 'btn-accent' : 'btn-outline-accent'} btn-sm">Da nhan xe</a>
             <a href="${pageContext.request.contextPath}/staff/dashboard?status=CAR_RETURNED"
                class="btn ${statusFilter == 'CAR_RETURNED' ? 'btn-accent' : 'btn-outline-accent'} btn-sm">Da tra xe</a>
+            <a href="${pageContext.request.contextPath}/staff/dashboard?status=SETTLEMENT_PENDING"
+               class="btn ${statusFilter == 'SETTLEMENT_PENDING' ? 'btn-accent' : 'btn-outline-accent'} btn-sm">Dang quyet toan</a>
         </div>
     </div>
 
@@ -70,39 +72,31 @@
                         <td><fmt:formatNumber value="${c.finalAmountDue}" pattern="#,###"/></td>
                         <td>
                             <c:choose>
-                                <c:when test="${c.status == 'PENDING_REVIEW'}"><span class="badge-status badge-pending">Cho duyet</span></c:when>
-                                <c:when test="${c.status == 'ACCEPTED'}"><span class="badge-status badge-accepted">Da duyet</span></c:when>
-                                <c:when test="${c.status == 'REJECTED'}"><span class="badge-status badge-rejected">Tu choi</span></c:when>
-                                <c:when test="${c.status == 'DEPOSIT_PAID'}"><span class="badge-status badge-deposit">Da dat coc</span></c:when>
+                                <c:when test="${c.status == 'PENDING_PAYMENT'}"><span class="badge-status badge-pending">Cho thanh toan</span></c:when>
+                                <c:when test="${c.status == 'PAYMENT_EXPIRED'}"><span class="badge-status badge-rejected">Het han</span></c:when>
+                                <c:when test="${c.status == 'RESERVED'}"><span class="badge-status badge-deposit">Da giu xe</span></c:when>
+                                <c:when test="${c.status == 'CONFIRMED'}"><span class="badge-status badge-accepted">Da xac nhan</span></c:when>
                                 <c:when test="${c.status == 'CAR_PICKED_UP'}"><span class="badge-status badge-picked">Da nhan xe</span></c:when>
                                 <c:when test="${c.status == 'CAR_RETURNED'}"><span class="badge-status badge-returned">Da tra xe</span></c:when>
-                                <c:when test="${c.status == 'FINAL_PAYMENT_COMPLETED'}"><span class="badge-status badge-completed">Hoan tat</span></c:when>
+                                <c:when test="${c.status == 'SETTLEMENT_PENDING'}"><span class="badge-status badge-pending">Dang quyet toan</span></c:when>
+                                <c:when test="${c.status == 'COMPLETED'}"><span class="badge-status badge-completed">Hoan tat</span></c:when>
                                 <c:when test="${c.status == 'CANCELLED'}"><span class="badge-status badge-cancelled">Da huy</span></c:when>
                                 <c:otherwise><span class="badge bg-secondary">${c.status}</span></c:otherwise>
                             </c:choose>
                         </td>
                         <td>
                             <div class="d-flex gap-1 flex-wrap">
-                                <c:if test="${c.status == 'PENDING_REVIEW'}">
+                                <c:if test="${c.status == 'PENDING_PAYMENT'}">
+                                    <span class="text-muted small"><i class="bi bi-hourglass-split me-1"></i>Doi thanh toan</span>
+                                </c:if>
+                                <c:if test="${c.status == 'RESERVED'}">
                                     <form method="post" action="${pageContext.request.contextPath}/staff/process" style="display:inline">
                                         <input type="hidden" name="contractId" value="${c.contractId}">
-                                        <input type="hidden" name="action" value="accept">
-                                        <button class="btn btn-sm btn-outline-accent" title="Duyet"><i class="bi bi-check-lg"></i></button>
-                                    </form>
-                                    <form method="post" action="${pageContext.request.contextPath}/staff/process" style="display:inline">
-                                        <input type="hidden" name="contractId" value="${c.contractId}">
-                                        <input type="hidden" name="action" value="reject">
-                                        <button class="btn btn-sm btn-outline-danger" title="Tu choi"><i class="bi bi-x-lg"></i></button>
+                                        <input type="hidden" name="action" value="confirm">
+                                        <button class="btn btn-sm btn-outline-accent" title="Xac nhan don"><i class="bi bi-check-lg"></i></button>
                                     </form>
                                 </c:if>
-                                <c:if test="${c.status == 'ACCEPTED'}">
-                                    <form method="post" action="${pageContext.request.contextPath}/staff/process" style="display:inline">
-                                        <input type="hidden" name="contractId" value="${c.contractId}">
-                                        <input type="hidden" name="action" value="deposit_paid">
-                                        <button class="btn btn-sm btn-outline-accent" title="Xac nhan dat coc"><i class="bi bi-cash-coin"></i></button>
-                                    </form>
-                                </c:if>
-                                <c:if test="${c.status == 'DEPOSIT_PAID'}">
+                                <c:if test="${c.status == 'CONFIRMED'}">
                                     <form method="post" action="${pageContext.request.contextPath}/staff/process" style="display:inline">
                                         <input type="hidden" name="contractId" value="${c.contractId}">
                                         <input type="hidden" name="action" value="car_picked_up">
@@ -117,13 +111,18 @@
                                     </form>
                                 </c:if>
                                 <c:if test="${c.status == 'CAR_RETURNED'}">
-                                    <form method="post" action="${pageContext.request.contextPath}/staff/process" style="display:inline">
-                                        <input type="hidden" name="contractId" value="${c.contractId}">
-                                        <input type="hidden" name="action" value="final_payment">
-                                        <button class="btn btn-sm btn-outline-accent" title="Thanh toan"><i class="bi bi-credit-card"></i></button>
-                                    </form>
+                                    <a href="${pageContext.request.contextPath}/staff/settlement?contractId=${c.contractId}"
+                                       class="btn btn-sm btn-outline-accent" title="Quyet toan">
+                                        <i class="bi bi-cash-stack"></i>
+                                    </a>
                                 </c:if>
-                                <c:if test="${c.status != 'REJECTED' and c.status != 'CANCELLED' and c.status != 'FINAL_PAYMENT_COMPLETED'}">
+                                <c:if test="${c.status == 'SETTLEMENT_PENDING'}">
+                                    <a href="${pageContext.request.contextPath}/staff/settlement?contractId=${c.contractId}"
+                                       class="btn btn-sm btn-outline-accent" title="Xem quyet toan">
+                                        <i class="bi bi-receipt"></i>
+                                    </a>
+                                </c:if>
+                                <c:if test="${c.status == 'PENDING_PAYMENT' or c.status == 'RESERVED' or c.status == 'CONFIRMED'}">
                                     <form method="post" action="${pageContext.request.contextPath}/staff/process" style="display:inline"
                                           onsubmit="return confirm('Ban chac chan muon huy hop dong nay?')">
                                         <input type="hidden" name="contractId" value="${c.contractId}">

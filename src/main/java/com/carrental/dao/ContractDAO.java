@@ -3,6 +3,9 @@ package com.carrental.dao;
 import com.carrental.config.DBContext;
 import com.carrental.model.Contract;
 import com.carrental.model.ContractDetail;
+import com.carrental.model.ContractStatus;
+import com.carrental.model.PaymentMode;
+import com.carrental.model.PaymentTransaction;
 import java.math.BigDecimal;
 import java.sql.*;
 import java.time.LocalDateTime;
@@ -11,6 +14,11 @@ import java.util.List;
 import java.util.UUID;
 
 public class ContractDAO {
+    private String lastErrorMessage;
+
+    public String getLastErrorMessage() {
+        return lastErrorMessage;
+    }
 
     public boolean createContractWithDetails(Contract contract, List<ContractDetail> details) {
         String insertContract = "INSERT INTO dbo.Contracts (ContractCode,CustomerID,PickupAt,ReturnAt,"
@@ -59,6 +67,94 @@ public class ContractDAO {
             }
         } catch (SQLException e) { e.printStackTrace(); }
         return false;
+    }
+
+    public PaymentTransaction createPendingBookingWithDetailsAndPayments(
+            Contract contract,
+            List<ContractDetail> details,
+            PaymentMode paymentMode) {
+
+        lastErrorMessage = null;
+
+        String insertContract = "INSERT INTO dbo.Contracts (ContractCode, CustomerID, PickupAt, ReturnAt, "
+            + "PickupLocation, ReturnLocation, Status, DepositAmountDue, FinalAmountDue) "
+            + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        String insertDetail = "INSERT INTO dbo.Contract_Details (ContractID, CarID, RequiresDriver, "
+            + "RentalDailyRate, DriverDailyRate, EstimatedDays, RentalAmount, DriverAmount) "
+            + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+
+        try (Connection conn = DBContext.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                String code = "CR-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+                long contractId;
+
+                try (PreparedStatement ps = conn.prepareStatement(insertContract, Statement.RETURN_GENERATED_KEYS)) {
+                    ps.setString(1, code);
+                    ps.setInt(2, contract.getCustomerId());
+                    ps.setTimestamp(3, Timestamp.valueOf(contract.getPickupAt()));
+                    ps.setTimestamp(4, Timestamp.valueOf(contract.getReturnAt()));
+                    ps.setString(5, contract.getPickupLocation());
+                    ps.setString(6, contract.getReturnLocation());
+                    ps.setString(7, ContractStatus.PENDING_PAYMENT);
+                    ps.setBigDecimal(8, contract.getDepositAmountDue());
+                    ps.setBigDecimal(9, contract.getFinalAmountDue());
+                    ps.executeUpdate();
+
+                    try (ResultSet keys = ps.getGeneratedKeys()) {
+                        if (!keys.next()) {
+                            throw new SQLException("Cannot create contract.");
+                        }
+                        contractId = keys.getLong(1);
+                    }
+                }
+
+                BigDecimal rentalAmount = BigDecimal.ZERO;
+                BigDecimal driverFeeAmount = BigDecimal.ZERO;
+                for (ContractDetail d : details) {
+                    try (PreparedStatement ps = conn.prepareStatement(insertDetail)) {
+                        ps.setLong(1, contractId);
+                        ps.setInt(2, d.getCarId());
+                        ps.setBoolean(3, d.isRequiresDriver());
+                        ps.setBigDecimal(4, d.getRentalDailyRate());
+                        ps.setBigDecimal(5, d.getDriverDailyRate());
+                        ps.setBigDecimal(6, d.getEstimatedDays());
+                        ps.setBigDecimal(7, d.getRentalAmount());
+                        ps.setBigDecimal(8, d.getDriverAmount());
+                        ps.executeUpdate();
+                    }
+                    rentalAmount = rentalAmount.add(safe(d.getRentalAmount()));
+                    driverFeeAmount = driverFeeAmount.add(safe(d.getDriverAmount()));
+                }
+
+                insertStatusHistory(conn, contractId, null, ContractStatus.PENDING_PAYMENT,
+                        "Booking created and waiting for deposit payment.");
+
+                PaymentDAO paymentDAO = new PaymentDAO();
+                PaymentTransaction paymentTransaction = paymentDAO.createPendingPayments(
+                        conn,
+                        contractId,
+                        code,
+                        contract.getDepositAmountDue(),
+                        rentalAmount,
+                        driverFeeAmount,
+                        paymentMode);
+
+                contract.setContractId(contractId);
+                contract.setContractCode(code);
+                contract.setStatus(ContractStatus.PENDING_PAYMENT);
+                conn.commit();
+                return paymentTransaction;
+            } catch (SQLException e) {
+                conn.rollback();
+                lastErrorMessage = toBookingErrorMessage(e);
+                e.printStackTrace();
+            }
+        } catch (SQLException e) {
+            lastErrorMessage = toBookingErrorMessage(e);
+            e.printStackTrace();
+        }
+        return null;
     }
 
     public List<Contract> getContractsByStatus(String status) {
@@ -177,6 +273,10 @@ public class ContractDAO {
                 // Update contract
                 String updateSql = "UPDATE dbo.Contracts SET Status=?, ReviewedByUserID=?, "
                     + "ReviewedAt=SYSUTCDATETIME(), UpdatedAt=SYSUTCDATETIME() WHERE ContractID=?";
+                if (!isAllowedTransition(oldStatus, newStatus)) {
+                    conn.rollback();
+                    return false;
+                }
                 try (PreparedStatement ps = conn.prepareStatement(updateSql)) {
                     ps.setString(1, newStatus);
                     ps.setInt(2, staffUserId);
@@ -216,12 +316,85 @@ public class ContractDAO {
 
     private String mapDetailStatus(String contractStatus) {
         return switch (contractStatus) {
-            case "ACCEPTED" -> "BOOKED";
-            case "REJECTED", "CANCELLED" -> "CANCELLED";
+            case "RESERVED", "CONFIRMED" -> "BOOKED";
+            case "PAYMENT_EXPIRED", "CANCELLED" -> "CANCELLED";
             case "CAR_PICKED_UP" -> "PICKED_UP";
-            case "CAR_RETURNED" -> "RETURNED";
+            case "CAR_RETURNED", "SETTLEMENT_PENDING", "COMPLETED" -> "RETURNED";
             default -> null;
         };
+    }
+
+    private boolean isAllowedTransition(String oldStatus, String newStatus) {
+        if (oldStatus == null || oldStatus.equals(newStatus)) {
+            return true;
+        }
+        return switch (oldStatus) {
+            case "PENDING_PAYMENT" -> newStatus.equals("PAYMENT_EXPIRED") || newStatus.equals("CANCELLED");
+            case "RESERVED" -> newStatus.equals("CONFIRMED") || newStatus.equals("CANCELLED");
+            case "CONFIRMED" -> newStatus.equals("CAR_PICKED_UP") || newStatus.equals("CANCELLED");
+            case "CAR_PICKED_UP" -> newStatus.equals("CAR_RETURNED");
+            case "CAR_RETURNED" -> newStatus.equals("SETTLEMENT_PENDING") || newStatus.equals("COMPLETED");
+            case "SETTLEMENT_PENDING" -> newStatus.equals("COMPLETED");
+            default -> false;
+        };
+    }
+
+    private void insertStatusHistory(Connection conn, long contractId, String oldStatus, String newStatus, String note)
+            throws SQLException {
+        try (PreparedStatement ps = conn.prepareStatement(
+                "INSERT INTO dbo.Contract_Status_History (ContractID,OldStatus,NewStatus,Note) "
+                + "VALUES (?,?,?,?)")) {
+            ps.setLong(1, contractId);
+            ps.setString(2, oldStatus);
+            ps.setString(3, newStatus);
+            ps.setString(4, note);
+            ps.executeUpdate();
+        }
+    }
+
+    private BigDecimal safe(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO : value;
+    }
+
+    private String toBookingErrorMessage(SQLException e) {
+        String message = e.getMessage();
+        if (message == null) {
+            return "Dat xe that bai do loi co so du lieu.";
+        }
+        if (message.contains("CK_Contracts_Status")
+                || message.contains("Payment_Transactions")
+                || message.contains("Payment_Webhook_Events")
+                || message.contains("ProviderOrderCode")
+                || message.contains("ProviderCheckoutUrl")
+                || message.contains("CK_Payments_Type")
+                || message.contains("CK_Payments_Status")) {
+            return "Database chua cap nhat migration thanh toan moi. Hay chay sql/payment-refactor-migration.sql va sql/payment-gateway-refund-migration.sql roi thu lai.";
+        }
+        if (message.contains("Missing PAYOS_CLIENT_ID")
+                || message.contains("PAYOS_CLIENT_ID, PAYOS_API_KEY")) {
+            return "Chua cau hinh cong thanh toan payOS hoac payOS dang loi. Hay kiem tra PAYOS_CLIENT_ID, PAYOS_API_KEY, PAYOS_CHECKSUM_KEY va APP_BASE_URL.";
+        }
+        if (message.contains("PAYOS") || message.contains("payOS")) {
+            return "PayOS hien chua tao duoc link thanh toan. Chi tiet: " + compactGatewayMessage(message);
+        }
+        if (message.toLowerCase().contains("overlap")
+                || message.toLowerCase().contains("conflict")) {
+            return "Dat xe that bai. Xe co the da duoc giu boi don hang khac trong cung thoi gian.";
+        }
+        return "Dat xe that bai do loi co so du lieu: " + message;
+    }
+
+    private String compactGatewayMessage(String message) {
+        String clean = message == null ? "" : message
+                .replace("Cannot create real payment link from payOS:", "")
+                .replaceAll("[\\r\\n\\t]+", " ")
+                .replaceAll("\\s+", " ")
+                .trim();
+        if (clean.isBlank()) {
+            return "vui long thu lai sau hoac kiem tra ket noi payOS/ngrok.";
+        }
+        int maxLength = 240;
+        return clean.length() <= maxLength ? clean : clean.substring(0, maxLength) + "...";
     }
 
     private Contract mapContract(ResultSet rs) throws SQLException {

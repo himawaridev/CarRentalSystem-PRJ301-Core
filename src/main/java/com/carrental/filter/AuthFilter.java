@@ -9,7 +9,7 @@ import com.carrental.model.User;
 import java.io.IOException;
 import java.util.List;
 
-@WebFilter(urlPatterns = {"/book", "/my-contracts", "/contract-detail", "/staff/*", "/manager/*", "/driver/*", "/admin/*"})
+@WebFilter(urlPatterns = {"/book", "/my-contracts", "/contract-detail", "/payment/*", "/staff/*", "/manager/*", "/driver/*", "/admin/*"})
 public class AuthFilter implements Filter {
 
     @Override
@@ -19,6 +19,12 @@ public class AuthFilter implements Filter {
         HttpServletResponse response = (HttpServletResponse) resp;
         HttpSession session = request.getSession(false);
         User user = (session != null) ? (User) session.getAttribute("loggedInUser") : null;
+        String path = request.getServletPath();
+
+        if (path.startsWith("/payment/webhook")) {
+            chain.doFilter(req, resp);
+            return;
+        }
 
         if (user == null) {
             String uri = request.getRequestURI();
@@ -32,7 +38,6 @@ public class AuthFilter implements Filter {
         // Role-based access control
         @SuppressWarnings("unchecked")
         List<String> roles = (List<String>) session.getAttribute("userRoles");
-        String path = request.getServletPath();
 
         if (path.startsWith("/staff") && !hasAnyRole(roles, "STAFF", "MANAGER", "ADMIN")) {
             response.sendError(HttpServletResponse.SC_FORBIDDEN, "Access denied");

@@ -1,14 +1,19 @@
 package com.carrental.controller;
 
 import com.carrental.dao.ContractDAO;
+import com.carrental.dao.PaymentDAO;
 import com.carrental.dao.UserDAO;
 import com.carrental.model.Contract;
+import com.carrental.model.ContractStatus;
+import com.carrental.model.PaymentTransaction;
 import com.carrental.model.User;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 @WebServlet("/my-contracts")
@@ -16,7 +21,7 @@ public class CustomerContractsServlet extends HttpServlet {
 
     // Statuses where customer can cancel (before payment)
     private static final Set<String> CANCELLABLE = Set.of(
-        "PENDING_REVIEW", "ACCEPTED"
+        ContractStatus.PENDING_PAYMENT
     );
 
     @Override
@@ -32,6 +37,18 @@ public class CustomerContractsServlet extends HttpServlet {
             ContractDAO contractDAO = new ContractDAO();
             List<Contract> contracts = contractDAO.getContractsByCustomerId(customerId);
             request.setAttribute("contracts", contracts);
+
+            PaymentDAO paymentDAO = new PaymentDAO();
+            Map<Long, String> pendingPaymentRefs = new HashMap<>();
+            for (Contract contract : contracts) {
+                if (ContractStatus.PENDING_PAYMENT.equals(contract.getStatus())) {
+                    PaymentTransaction tx = paymentDAO.getLatestPendingTransactionByContractId(contract.getContractId());
+                    if (tx != null) {
+                        pendingPaymentRefs.put(contract.getContractId(), tx.getProviderTransactionRef());
+                    }
+                }
+            }
+            request.setAttribute("pendingPaymentRefs", pendingPaymentRefs);
         }
 
         // Flash messages
@@ -67,7 +84,7 @@ public class CustomerContractsServlet extends HttpServlet {
                     "Khong the huy hop dong o trang thai \"" + contract.getStatus()
                     + "\". Chi co the huy khi chua nhan xe.");
             } else {
-                boolean ok = contractDAO.updateContractStatus(contractId, "CANCELLED", user.getUserId());
+                boolean ok = contractDAO.updateContractStatus(contractId, ContractStatus.CANCELLED, user.getUserId());
                 session.setAttribute(ok ? "flashSuccess" : "flashError",
                     ok ? "Da huy hop dong " + contract.getContractCode() + " thanh cong!"
                        : "Huy hop dong that bai! Vui long thu lai.");

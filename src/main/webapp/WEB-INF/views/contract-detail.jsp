@@ -19,13 +19,14 @@
                     <div class="d-flex align-items-center gap-3 mb-3">
                         <h4 class="mb-0 text-accent fw-bold">${contract.contractCode}</h4>
                         <c:choose>
-                            <c:when test="${contract.status == 'PENDING_REVIEW'}"><span class="badge-status badge-pending">Cho duyet</span></c:when>
-                            <c:when test="${contract.status == 'ACCEPTED'}"><span class="badge-status badge-accepted">Da duyet</span></c:when>
-                            <c:when test="${contract.status == 'REJECTED'}"><span class="badge-status badge-rejected">Tu choi</span></c:when>
-                            <c:when test="${contract.status == 'DEPOSIT_PAID'}"><span class="badge-status badge-deposit">Da dat coc</span></c:when>
+                            <c:when test="${contract.status == 'PENDING_PAYMENT'}"><span class="badge-status badge-pending">Cho thanh toan</span></c:when>
+                            <c:when test="${contract.status == 'PAYMENT_EXPIRED'}"><span class="badge-status badge-rejected">Het han</span></c:when>
+                            <c:when test="${contract.status == 'RESERVED'}"><span class="badge-status badge-deposit">Da giu xe</span></c:when>
+                            <c:when test="${contract.status == 'CONFIRMED'}"><span class="badge-status badge-accepted">Da xac nhan</span></c:when>
                             <c:when test="${contract.status == 'CAR_PICKED_UP'}"><span class="badge-status badge-picked">Da nhan xe</span></c:when>
                             <c:when test="${contract.status == 'CAR_RETURNED'}"><span class="badge-status badge-returned">Da tra xe</span></c:when>
-                            <c:when test="${contract.status == 'FINAL_PAYMENT_COMPLETED'}"><span class="badge-status badge-completed">Hoan tat</span></c:when>
+                            <c:when test="${contract.status == 'SETTLEMENT_PENDING'}"><span class="badge-status badge-pending">Dang quyet toan</span></c:when>
+                            <c:when test="${contract.status == 'COMPLETED'}"><span class="badge-status badge-completed">Hoan tat</span></c:when>
                             <c:when test="${contract.status == 'CANCELLED'}"><span class="badge-status badge-cancelled">Da huy</span></c:when>
                             <c:otherwise><span class="badge bg-secondary">${contract.status}</span></c:otherwise>
                         </c:choose>
@@ -158,27 +159,31 @@
     <div class="card-custom">
         <div class="card-body">
             <div class="d-flex flex-wrap gap-2 align-items-center">
-                <span class="badge ${contract.status == 'PENDING_REVIEW' || contract.status == 'ACCEPTED' || contract.status == 'DEPOSIT_PAID' || contract.status == 'CAR_PICKED_UP' || contract.status == 'CAR_RETURNED' || contract.status == 'FINAL_PAYMENT_COMPLETED' ? 'bg-primary' : 'bg-secondary'} rounded-pill px-3 py-2">
-                    <i class="bi bi-send me-1"></i>Gui yeu cau
+                <span class="badge ${contract.status == 'PENDING_PAYMENT' || contract.status == 'RESERVED' || contract.status == 'CONFIRMED' || contract.status == 'CAR_PICKED_UP' || contract.status == 'CAR_RETURNED' || contract.status == 'SETTLEMENT_PENDING' || contract.status == 'COMPLETED' ? 'bg-primary' : 'bg-secondary'} rounded-pill px-3 py-2">
+                    <i class="bi bi-send me-1"></i>Tao don
                 </span>
                 <i class="bi bi-chevron-right text-muted"></i>
-                <span class="badge ${contract.status == 'ACCEPTED' || contract.status == 'DEPOSIT_PAID' || contract.status == 'CAR_PICKED_UP' || contract.status == 'CAR_RETURNED' || contract.status == 'FINAL_PAYMENT_COMPLETED' ? 'bg-primary' : 'bg-secondary'} rounded-pill px-3 py-2">
-                    <i class="bi bi-check-circle me-1"></i>Duyet don
+                <span class="badge ${contract.status == 'RESERVED' || contract.status == 'CONFIRMED' || contract.status == 'CAR_PICKED_UP' || contract.status == 'CAR_RETURNED' || contract.status == 'SETTLEMENT_PENDING' || contract.status == 'COMPLETED' ? 'bg-primary' : 'bg-secondary'} rounded-pill px-3 py-2">
+                    <i class="bi bi-credit-card me-1"></i>Thanh toan coc
                 </span>
                 <i class="bi bi-chevron-right text-muted"></i>
-                <span class="badge ${contract.status == 'DEPOSIT_PAID' || contract.status == 'CAR_PICKED_UP' || contract.status == 'CAR_RETURNED' || contract.status == 'FINAL_PAYMENT_COMPLETED' ? 'bg-primary' : 'bg-secondary'} rounded-pill px-3 py-2">
-                    <i class="bi bi-credit-card me-1"></i>Dat coc
+                <span class="badge ${contract.status == 'CONFIRMED' || contract.status == 'CAR_PICKED_UP' || contract.status == 'CAR_RETURNED' || contract.status == 'SETTLEMENT_PENDING' || contract.status == 'COMPLETED' ? 'bg-primary' : 'bg-secondary'} rounded-pill px-3 py-2">
+                    <i class="bi bi-check-circle me-1"></i>Xac nhan
                 </span>
                 <i class="bi bi-chevron-right text-muted"></i>
-                <span class="badge ${contract.status == 'CAR_PICKED_UP' || contract.status == 'CAR_RETURNED' || contract.status == 'FINAL_PAYMENT_COMPLETED' ? 'bg-primary' : 'bg-secondary'} rounded-pill px-3 py-2">
+                <span class="badge ${contract.status == 'CAR_PICKED_UP' || contract.status == 'CAR_RETURNED' || contract.status == 'SETTLEMENT_PENDING' || contract.status == 'COMPLETED' ? 'bg-primary' : 'bg-secondary'} rounded-pill px-3 py-2">
                     <i class="bi bi-car-front me-1"></i>Nhan xe
                 </span>
                 <i class="bi bi-chevron-right text-muted"></i>
-                <span class="badge ${contract.status == 'CAR_RETURNED' || contract.status == 'FINAL_PAYMENT_COMPLETED' ? 'bg-primary' : 'bg-secondary'} rounded-pill px-3 py-2">
+                <span class="badge ${contract.status == 'CAR_RETURNED' || contract.status == 'SETTLEMENT_PENDING' || contract.status == 'COMPLETED' ? 'bg-primary' : 'bg-secondary'} rounded-pill px-3 py-2">
                     <i class="bi bi-arrow-return-left me-1"></i>Tra xe
                 </span>
                 <i class="bi bi-chevron-right text-muted"></i>
-                <span class="badge ${contract.status == 'FINAL_PAYMENT_COMPLETED' ? 'bg-success' : 'bg-secondary'} rounded-pill px-3 py-2">
+                <span class="badge ${contract.status == 'SETTLEMENT_PENDING' || contract.status == 'COMPLETED' ? 'bg-primary' : 'bg-secondary'} rounded-pill px-3 py-2">
+                    <i class="bi bi-cash-stack me-1"></i>Quyet toan
+                </span>
+                <i class="bi bi-chevron-right text-muted"></i>
+                <span class="badge ${contract.status == 'COMPLETED' ? 'bg-success' : 'bg-secondary'} rounded-pill px-3 py-2">
                     <i class="bi bi-check-all me-1"></i>Hoan tat
                 </span>
             </div>
@@ -187,9 +192,9 @@
                     <i class="bi bi-x-circle-fill me-1"></i>Hop dong nay da bi huy.
                 </div>
             </c:if>
-            <c:if test="${contract.status == 'REJECTED'}">
+            <c:if test="${contract.status == 'PAYMENT_EXPIRED'}">
                 <div class="mt-3 text-danger">
-                    <i class="bi bi-x-circle-fill me-1"></i>Hop dong bi tu choi boi nhan vien.
+                    <i class="bi bi-x-circle-fill me-1"></i>Giao dich thanh toan da het han.
                 </div>
             </c:if>
         </div>
