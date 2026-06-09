@@ -36,7 +36,7 @@
             <table class="table table-custom">
                 <thead>
                     <tr>
-                        <th>ID</th><th>Bien so</th><th>Hang</th><th>Model</th><th>Loai</th>
+                        <th>ID</th><th>Bien so</th><th>Hang</th><th>Model</th><th>Loai</th><th>Con</th>
                         <th>Gia/ngay</th><th>Dat coc</th><th>Trang thai</th><th></th>
                     </tr>
                 </thead>
@@ -48,6 +48,7 @@
                         <td>${car.brand}</td>
                         <td>${car.model}</td>
                         <td><span class="car-tag">${car.seatCount} cho</span></td>
+                        <td><span class="car-tag">${car.availableQuantity} xe</span></td>
                         <td><fmt:formatNumber value="${car.dailyRate}" pattern="#,###"/></td>
                         <td><fmt:formatNumber value="${car.depositAmount}" pattern="#,###"/></td>
                         <td>
@@ -190,7 +191,7 @@
 
         <c:if test="${not empty acceptedContracts}">
         <div class="mb-4">
-            <label class="form-label">Chon hop dong da duyet:</label>
+            <label class="form-label">Chon hop dong da xac nhan:</label>
             <div class="d-flex flex-wrap gap-2">
                 <c:forEach var="ac" items="${acceptedContracts}">
                     <a href="${pageContext.request.contextPath}/manager/dashboard?tab=assign&contractId=${ac.contractId}"

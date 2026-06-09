@@ -4,9 +4,14 @@ import com.carrental.dao.CarDAO;
 import com.carrental.model.Car;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
-import jakarta.servlet.http.*;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @WebServlet("/cars")
 public class CarCatalogServlet extends HttpServlet {
@@ -15,37 +20,92 @@ public class CarCatalogServlet extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         CarDAO carDAO = new CarDAO();
-        List<Car> allCars = carDAO.getAllCars();
+        List<Car> allCars = carDAO.getCatalogCarGroups();
 
-        // Filter params
         String seatFilter = request.getParameter("seats");
-        String brandFilter = request.getParameter("brand");
-        String statusFilter = request.getParameter("status");
+        String brandFilter = normalize(request.getParameter("brand"));
+        String statusFilter = normalize(request.getParameter("status"));
+        String minPriceStr = normalize(request.getParameter("minPrice"));
+        String maxPriceStr = normalize(request.getParameter("maxPrice"));
 
-        // Apply filters
+        Integer seatCount = parseInteger(seatFilter);
+        BigDecimal minPrice = parseMoney(minPriceStr);
+        BigDecimal maxPrice = parseMoney(maxPriceStr);
+
+        boolean invalidFilter = (seatFilter != null && !seatFilter.isBlank() && seatCount == null)
+                || (minPriceStr != null && !minPriceStr.isBlank() && minPrice == null)
+                || (maxPriceStr != null && !maxPriceStr.isBlank() && maxPrice == null)
+                || (minPrice != null && minPrice.compareTo(BigDecimal.ZERO) < 0)
+                || (maxPrice != null && maxPrice.compareTo(BigDecimal.ZERO) < 0)
+                || (minPrice != null && maxPrice != null && minPrice.compareTo(maxPrice) > 0);
+
+        if (invalidFilter) {
+            request.setAttribute("catalogError", "Bo loc khong hop le. Vui long kiem tra so cho va khoang gia.");
+            minPrice = null;
+            maxPrice = null;
+        }
+
+        BigDecimal minRate = minPrice;
+        BigDecimal maxRate = maxPrice;
         List<Car> filtered = allCars.stream()
-            .filter(c -> seatFilter == null || seatFilter.isEmpty()
-                || String.valueOf(c.getSeatCount()).equals(seatFilter))
-            .filter(c -> brandFilter == null || brandFilter.isEmpty()
-                || c.getBrand().equalsIgnoreCase(brandFilter))
-            .filter(c -> statusFilter == null || statusFilter.isEmpty()
-                || c.getStatus().equalsIgnoreCase(statusFilter))
-            .toList();
-
-        // Get unique brands for filter dropdown
-        List<String> brands = allCars.stream()
-            .map(Car::getBrand)
-            .distinct()
-            .sorted()
-            .toList();
+                .filter(c -> seatCount == null || c.getSeatCount() == seatCount)
+                .filter(c -> brandFilter == null || brandFilter.isBlank()
+                        || c.getBrand().equalsIgnoreCase(brandFilter))
+                .filter(c -> statusFilter == null || statusFilter.isBlank()
+                        || c.getStatus().equalsIgnoreCase(statusFilter))
+                .filter(c -> minRate == null || c.getDailyRate().compareTo(minRate) >= 0)
+                .filter(c -> maxRate == null || c.getDailyRate().compareTo(maxRate) <= 0)
+                .toList();
 
         request.setAttribute("cars", filtered);
         request.setAttribute("allCars", allCars);
-        request.setAttribute("brands", brands);
+        request.setAttribute("brandCarGroups", groupCarsByBrand(allCars));
+        request.setAttribute("brands", carDAO.getAvailableBrands());
+        request.setAttribute("seatCounts", carDAO.getAvailableSeatCounts());
         request.setAttribute("seatFilter", seatFilter);
         request.setAttribute("brandFilter", brandFilter);
         request.setAttribute("statusFilter", statusFilter);
+        request.setAttribute("minPrice", minPriceStr);
+        request.setAttribute("maxPrice", maxPriceStr);
 
         request.getRequestDispatcher("/WEB-INF/views/car-catalog.jsp").forward(request, response);
+    }
+
+    private Integer parseInteger(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return Integer.parseInt(value.trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private BigDecimal parseMoney(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return new BigDecimal(value.trim().replace(",", ""));
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private String normalize(String value) {
+        return value == null ? null : value.trim();
+    }
+
+    private Map<String, List<Car>> groupCarsByBrand(List<Car> cars) {
+        Map<String, List<Car>> groups = new LinkedHashMap<>();
+        for (Car car : cars) {
+            String brand = normalize(car.getBrand());
+            if (brand == null || brand.isBlank()) {
+                brand = "Khac";
+            }
+            groups.computeIfAbsent(brand, key -> new java.util.ArrayList<>()).add(car);
+        }
+        return groups;
     }
 }

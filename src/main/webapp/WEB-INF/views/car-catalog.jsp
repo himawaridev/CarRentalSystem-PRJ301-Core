@@ -2,6 +2,7 @@
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <%@ taglib prefix="fmt" uri="jakarta.tags.fmt" %>
 <jsp:include page="/WEB-INF/includes/header.jsp"><jsp:param name="title" value="Danh sach xe"/></jsp:include>
+<c:url var="placeholderImage" value="/images/car-placeholder.svg" />
 
 <div class="catalog-hero">
     <div class="container">
@@ -16,14 +17,17 @@
 
     <!-- Filters -->
     <div class="catalog-filter-bar mb-4">
+        <c:if test="${not empty catalogError}">
+            <div class="alert alert-custom-error mb-3">${catalogError}</div>
+        </c:if>
         <form method="get" action="${pageContext.request.contextPath}/cars" class="d-flex flex-wrap gap-3 align-items-end">
             <div>
-                <label class="form-label small fw-bold text-muted">LOAI XE</label>
+                <label class="form-label small fw-bold text-muted">SO CHO</label>
                 <select name="seats" class="form-select form-select-sm" style="width:160px">
                     <option value="">Tat ca</option>
-                    <option value="4" ${seatFilter == '4' ? 'selected' : ''}>Sedan - 4 cho</option>
-                    <option value="5" ${seatFilter == '5' ? 'selected' : ''}>SUV/Sedan - 5 cho</option>
-                    <option value="7" ${seatFilter == '7' ? 'selected' : ''}>SUV/MPV - 7 cho</option>
+                    <c:forEach var="s" items="${seatCounts}">
+                        <option value="${s}" ${seatFilter == s ? 'selected' : ''}>${s} cho</option>
+                    </c:forEach>
                 </select>
             </div>
             <div>
@@ -44,6 +48,16 @@
                 </select>
             </div>
             <div>
+                <label class="form-label small fw-bold text-muted">GIA TU</label>
+                <input type="number" min="0" step="1000" name="minPrice" value="${minPrice}"
+                       class="form-control form-control-sm" style="width:150px" placeholder="VD: 500000">
+            </div>
+            <div>
+                <label class="form-label small fw-bold text-muted">GIA DEN</label>
+                <input type="number" min="0" step="1000" name="maxPrice" value="${maxPrice}"
+                       class="form-control form-control-sm" style="width:150px" placeholder="VD: 1500000">
+            </div>
+            <div>
                 <button type="submit" class="btn btn-accent btn-sm px-4">
                     <i class="bi bi-funnel me-1"></i>Loc
                 </button>
@@ -52,10 +66,23 @@
                 </a>
             </div>
             <div class="ms-auto">
-                <span class="text-muted small"><i class="bi bi-car-front me-1"></i>Hien thi <strong>${cars.size()}</strong> xe</span>
+                <span class="text-muted small"><i class="bi bi-car-front me-1"></i>Hien thi <strong>${cars.size()}</strong> dong xe</span>
             </div>
         </form>
     </div>
+
+    <c:if test="${not empty cars}">
+        <div class="catalog-selection-bar mb-4">
+            <div>
+                <span class="text-muted small">Xe da chon</span>
+                <strong class="ms-2"><span id="selectedCatalogCount">0</span></strong>
+            </div>
+            <button type="button" class="btn btn-accent btn-sm px-4" id="catalogBookBtn"
+                    onclick="openBookingModal()" disabled>
+                <i class="bi bi-calendar-check me-1"></i>Dat xe da chon
+            </button>
+        </div>
+    </c:if>
 
     <!-- Car grid -->
     <c:if test="${empty cars}">
@@ -69,10 +96,25 @@
     <div class="row g-4">
         <c:forEach var="car" items="${cars}" varStatus="loop">
             <div class="col-md-6 col-lg-4">
-                <div class="catalog-card">
+                <div class="catalog-card" id="catalogCard-${car.carId}">
                     <!-- Card header with car icon -->
                     <div class="catalog-card-visual">
-                        <i class="bi bi-car-front-fill"></i>
+                        <div class="swiper car-image-swiper" data-slider="car-images">
+                            <div class="swiper-wrapper">
+                                <c:forEach var="imageCar" items="${brandCarGroups[car.brand]}">
+                                    <c:set var="catalogImageSrc" value="${empty imageCar.imageUrl ? placeholderImage : imageCar.imageUrl}" />
+                                    <div class="swiper-slide">
+                                        <img src="${catalogImageSrc}"
+                                             alt="${imageCar.brand} ${imageCar.model}"
+                                             class="car-card-image"
+                                             loading="lazy"
+                                             decoding="async"
+                                             onerror="this.onerror=null;this.src='${placeholderImage}';">
+                                    </div>
+                                </c:forEach>
+                            </div>
+                            <div class="swiper-pagination car-image-pagination"></div>
+                        </div>
                         <c:choose>
                             <c:when test="${car.status == 'AVAILABLE'}">
                                 <span class="catalog-status catalog-status-available">
@@ -94,8 +136,16 @@
 
                     <!-- Card body -->
                     <div class="catalog-card-body">
-                        <h5 class="catalog-car-name">${car.brand} ${car.model}</h5>
-                        <div class="catalog-plate">${car.licensePlate}</div>
+                        <div class="d-flex justify-content-between align-items-start gap-3">
+                            <h5 class="catalog-car-name">${car.brand} ${car.model}</h5>
+                            <c:if test="${car.status == 'AVAILABLE'}">
+                                <div class="form-check m-0">
+                                    <input class="form-check-input catalog-car-checkbox" type="checkbox"
+                                           id="selectCar-${car.carId}" value="${car.carId}"
+                                           onchange="updateCatalogSelection()">
+                                </div>
+                            </c:if>
+                        </div>
 
                         <!-- Specs grid -->
                         <div class="catalog-specs">
@@ -121,15 +171,9 @@
                                     <span>${car.manufactureYear}</span>
                                 </div>
                             </c:if>
-                            <c:if test="${not empty car.color}">
-                                <div class="catalog-spec">
-                                    <i class="bi bi-palette-fill"></i>
-                                    <span>${car.color}</span>
-                                </div>
-                            </c:if>
                             <div class="catalog-spec">
-                                <i class="bi bi-speedometer2"></i>
-                                <span><fmt:formatNumber value="${car.mileage}" pattern="#,###"/> km</span>
+                                <i class="bi bi-stack"></i>
+                                <span>Con ${car.availableQuantity} xe</span>
                             </div>
                         </div>
 
@@ -148,9 +192,9 @@
                                 </div>
                             </div>
                             <c:if test="${car.status == 'AVAILABLE'}">
-                                <button class="btn btn-accent btn-sm"
-                                        onclick="openBookingModal(${car.carId}, '${car.brand} ${car.model}')">
-                                    <i class="bi bi-calendar-check me-1"></i>Dat xe
+                                <button type="button" class="btn btn-accent btn-sm catalog-select-btn"
+                                        id="selectBtn-${car.carId}" onclick="toggleCatalogSelection(${car.carId})">
+                                    <i class="bi bi-check2-square me-1"></i>Chon
                                 </button>
                             </c:if>
                         </div>
@@ -166,9 +210,11 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <form id="directBookForm" method="get" action="${pageContext.request.contextPath}/book">
-                <input type="hidden" id="modalCarId" name="carId" value="">
+                <div id="selectedCatalogCarIds"></div>
                 <div class="modal-header">
-                    <h5 class="modal-title"><i class="bi bi-calendar-check me-2"></i>Dat xe: <span id="modalCarName"></span></h5>
+                    <h5 class="modal-title">
+                        <i class="bi bi-calendar-check me-2"></i>Dat xe da chon: <span id="modalSelectedCount">0</span>
+                    </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
@@ -196,9 +242,62 @@
 </div>
 
 <script>
-function openBookingModal(carId, carName) {
-    document.getElementById('modalCarId').value = carId;
-    document.getElementById('modalCarName').textContent = carName;
+function updateCatalogSelection() {
+    var checked = document.querySelectorAll('.catalog-car-checkbox:checked');
+    var count = checked.length;
+    var countLabel = document.getElementById('selectedCatalogCount');
+    var bookButton = document.getElementById('catalogBookBtn');
+    if (countLabel) {
+        countLabel.textContent = count;
+    }
+    if (bookButton) {
+        bookButton.disabled = count === 0;
+    }
+
+    document.querySelectorAll('.catalog-card').forEach(function(card) {
+        card.classList.remove('catalog-card-selected');
+    });
+    document.querySelectorAll('.catalog-select-btn').forEach(function(button) {
+        button.innerHTML = '<i class="bi bi-check2-square me-1"></i>Chon';
+    });
+
+    checked.forEach(function(cb) {
+        var card = document.getElementById('catalogCard-' + cb.value);
+        var button = document.getElementById('selectBtn-' + cb.value);
+        if (card) {
+            card.classList.add('catalog-card-selected');
+        }
+        if (button) {
+            button.innerHTML = '<i class="bi bi-check-circle me-1"></i>Da chon';
+        }
+    });
+}
+
+function toggleCatalogSelection(carId) {
+    var checkbox = document.getElementById('selectCar-' + carId);
+    if (!checkbox) {
+        return;
+    }
+    checkbox.checked = !checkbox.checked;
+    updateCatalogSelection();
+}
+
+function openBookingModal() {
+    var checked = document.querySelectorAll('.catalog-car-checkbox:checked');
+    if (checked.length === 0) {
+        return;
+    }
+
+    var selectedContainer = document.getElementById('selectedCatalogCarIds');
+    selectedContainer.innerHTML = '';
+    checked.forEach(function(cb) {
+        var input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'carId';
+        input.value = cb.value;
+        selectedContainer.appendChild(input);
+    });
+    document.getElementById('modalSelectedCount').textContent = checked.length + ' xe';
 
     // Set default dates: pickup = tomorrow 8AM, return = day after tomorrow 8AM
     var now = new Date();
@@ -230,6 +329,8 @@ document.getElementById('directBookForm').addEventListener('submit', function(e)
         alert('Ngay tra xe phai sau ngay nhan xe!');
     }
 });
+
+updateCatalogSelection();
 </script>
 
 <jsp:include page="/WEB-INF/includes/footer.jsp"/>

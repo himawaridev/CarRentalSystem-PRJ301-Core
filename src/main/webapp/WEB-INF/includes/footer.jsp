@@ -264,5 +264,89 @@
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    window.__carRentalSwipers = window.__carRentalSwipers || [];
+
+    document.querySelectorAll('[data-slider="car-images"], [data-slider="brand-images"]').forEach(function(slider) {
+        if (slider.dataset.initialized === 'true') {
+            return;
+        }
+        slider.dataset.initialized = 'true';
+
+        if (typeof Swiper === 'undefined') {
+            startFallbackSlider(slider);
+            return;
+        }
+
+        var instance = new Swiper(slider, {
+            slidesPerView: 1,
+            loop: true,
+            allowTouchMove: true,
+            grabCursor: true,
+            watchOverflow: true,
+            speed: 600,
+            autoplay: {
+                delay: 3000,
+                disableOnInteraction: false
+            },
+            pagination: {
+                el: slider.querySelector('.swiper-pagination'),
+                clickable: true
+            }
+        });
+        slider.swiperInstance = instance;
+        window.__carRentalSwipers.push(instance);
+
+        window.setTimeout(function() {
+            if (!instance || slider.querySelectorAll('.swiper-slide').length <= 1) {
+                return;
+            }
+            if (instance.autoplay && instance.autoplay.running) {
+                return;
+            }
+            window.setInterval(function() {
+                if (!document.hidden && typeof instance.slideNext === 'function') {
+                    instance.slideNext();
+                }
+            }, 3000);
+        }, 3200);
+    });
+
+    function startFallbackSlider(slider) {
+        var slides = Array.from(slider.querySelectorAll('.swiper-slide'));
+        if (slides.length <= 1) {
+            return;
+        }
+        var index = 0;
+        var touchStartX = null;
+        function showSlide(nextIndex) {
+            slides[index].style.display = 'none';
+            index = (nextIndex + slides.length) % slides.length;
+            slides[index].style.display = 'block';
+        }
+        slides.forEach(function(slide, slideIndex) {
+            slide.style.display = slideIndex === 0 ? 'block' : 'none';
+        });
+        window.setInterval(function() {
+            showSlide(index + 1);
+        }, 3000);
+        slider.addEventListener('touchstart', function(event) {
+            touchStartX = event.touches && event.touches.length ? event.touches[0].clientX : null;
+        }, { passive: true });
+        slider.addEventListener('touchend', function(event) {
+            if (touchStartX === null || !event.changedTouches || !event.changedTouches.length) {
+                return;
+            }
+            var deltaX = event.changedTouches[0].clientX - touchStartX;
+            if (Math.abs(deltaX) > 32) {
+                showSlide(deltaX < 0 ? index + 1 : index - 1);
+            }
+            touchStartX = null;
+        }, { passive: true });
+    }
+});
+</script>
 </body>
 </html>

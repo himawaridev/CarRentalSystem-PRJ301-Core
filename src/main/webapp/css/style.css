@@ -428,6 +428,20 @@ a {
 .car-card:hover .car-icon {
     color: var(--primary);
 }
+.search-car-visual {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    border-radius: var(--radius-sm);
+    background: var(--gray-100);
+    border: 1px solid var(--gray-200);
+}
+.search-car-image {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+}
 
 /* ===== Auth Pages ===== */
 .auth-wrapper {
@@ -571,6 +585,91 @@ a {
 }
 .form-check-input:focus {
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2) !important;
+}
+
+.payment-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    width: 100%;
+    height: 100%;
+    padding: 14px;
+    border: 1.5px solid var(--gray-300);
+    border-radius: var(--radius-sm);
+    background: var(--white);
+    cursor: pointer;
+    transition: var(--transition);
+}
+.payment-option:hover {
+    border-color: var(--primary);
+    background: var(--primary-50);
+}
+.payment-option strong,
+.payment-option small {
+    display: block;
+}
+.payment-option small {
+    color: var(--gray-500);
+    font-size: 0.78rem;
+    margin-top: 2px;
+}
+
+.qr-box {
+    min-height: 220px;
+    border: 1.5px dashed var(--primary-200);
+    border-radius: var(--radius);
+    background: var(--gray-50);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+.qr-box i {
+    font-size: 5rem;
+    color: var(--primary);
+}
+.payment-qr-img {
+    width: min(100%, 320px);
+    max-width: 320px;
+    aspect-ratio: 1 / 1;
+    object-fit: contain;
+    border-radius: var(--radius-sm);
+    background: var(--white);
+    padding: 10px;
+    border: 1px solid var(--gray-200);
+}
+.payment-line,
+.settlement-item {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--gray-200);
+}
+.payment-line span,
+.settlement-item span {
+    color: var(--gray-500);
+    font-size: 0.85rem;
+}
+.payment-line strong,
+.settlement-item strong {
+    color: var(--gray-900);
+    text-align: right;
+}
+.settlement-item {
+    height: 100%;
+    padding: 16px;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-sm);
+    background: var(--white);
+}
+.settlement-strong {
+    border-color: var(--warning-border);
+    background: var(--warning-bg);
+}
+.settlement-refund {
+    border-color: var(--success-border);
+    background: var(--success-bg);
 }
 
 /* ===== Action Buttons (Small table buttons) ===== */
@@ -944,6 +1043,90 @@ a.text-accent:hover {
     color: var(--primary);
     background: var(--primary-50);
 }
+.featured-brands-section {
+    padding-top: 8px;
+}
+.brand-showcase-card {
+    height: 100%;
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition-slow);
+}
+.brand-showcase-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--primary-200);
+}
+.brand-image-swiper {
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    background: var(--gray-100);
+}
+.brand-showcase-image {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+}
+.brand-showcase-body {
+    padding: 16px;
+}
+.brand-showcase-body h5 {
+    margin: 0 0 2px;
+    color: var(--gray-900);
+    font-size: 1.05rem;
+    font-weight: 800;
+}
+.brand-count-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    height: 32px;
+    border-radius: 999px;
+    background: var(--primary-50);
+    color: var(--primary);
+    border: 1px solid var(--primary-200);
+    font-weight: 800;
+    font-size: 0.85rem;
+}
+.brand-models {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 14px 0;
+    min-height: 32px;
+}
+.brand-models span {
+    display: inline-flex;
+    max-width: 100%;
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: var(--gray-100);
+    color: var(--gray-600);
+    border: 1px solid var(--gray-200);
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+.brand-image-pagination,
+.car-image-pagination {
+    bottom: 8px !important;
+}
+.brand-image-pagination .swiper-pagination-bullet,
+.car-image-pagination .swiper-pagination-bullet {
+    width: 7px;
+    height: 7px;
+    background: rgba(255, 255, 255, 0.85);
+    opacity: 0.85;
+}
+.brand-image-pagination .swiper-pagination-bullet-active,
+.car-image-pagination .swiper-pagination-bullet-active {
+    background: var(--primary);
+    opacity: 1;
+}
 
 /* ===== Responsive Hero ===== */
 @media (max-width: 991px) {
@@ -986,6 +1169,17 @@ a.text-accent:hover {
     padding: 20px 24px;
     box-shadow: var(--shadow-sm);
 }
+.catalog-selection-bar {
+    background: var(--white);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    box-shadow: var(--shadow-sm);
+}
 .catalog-card {
     background: var(--white);
     border: 1px solid var(--border);
@@ -1001,16 +1195,31 @@ a.text-accent:hover {
     box-shadow: var(--shadow-lg);
     border-color: var(--primary-200);
 }
+.catalog-card-selected {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12), var(--shadow-lg);
+}
 .catalog-card-visual {
-    background: linear-gradient(135deg, #f0f4ff, #e0e7ff);
+    background: var(--gray-100);
     text-align: center;
-    padding: 32px 20px;
+    padding: 0;
     position: relative;
+    overflow: hidden;
 }
 .catalog-card-visual > i {
     font-size: 4.5rem;
     color: var(--primary);
     opacity: 0.35;
+}
+.car-image-swiper {
+    width: 100%;
+    aspect-ratio: 16 / 10;
+}
+.car-card-image {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
 }
 .catalog-status {
     position: absolute;
@@ -1311,4 +1520,3 @@ footer.site-footer .footer-copyright {
     .footer-cta { text-align: center; }
     .footer-cta .btn { margin-top: 12px; }
 }
-

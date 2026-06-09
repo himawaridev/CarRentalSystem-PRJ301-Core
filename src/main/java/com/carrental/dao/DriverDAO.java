@@ -35,7 +35,7 @@ public class DriverDAO {
             + "  INNER JOIN dbo.Contracts c ON cd.ContractID = c.ContractID "
             + "  WHERE da.DriverID = d.DriverID "
             + "    AND da.AssignmentStatus NOT IN (N'CANCELLED', N'TRIP_COMPLETED') "
-            + "    AND c.Status NOT IN (N'CANCELLED', N'REJECTED', N'FINAL_PAYMENT_COMPLETED') "
+            + "    AND c.Status NOT IN (N'PENDING_PAYMENT', N'PAYMENT_EXPIRED', N'CANCELLED', N'COMPLETED') "
             + "    AND c.PickupAt < ? AND c.ReturnAt > ? "
             + ") THEN 1 ELSE 0 END AS IsBusy "
             + "FROM dbo.Drivers d "
@@ -75,7 +75,7 @@ public class DriverDAO {
             + "INNER JOIN dbo.Customers cu ON con.CustomerID = cu.CustomerID "
             + "INNER JOIN dbo.Users u2 ON cu.UserID = u2.UserID "
             + "WHERE da.AssignmentStatus NOT IN (N'CANCELLED', N'TRIP_COMPLETED') "
-            + "AND con.Status NOT IN (N'CANCELLED', N'REJECTED', N'FINAL_PAYMENT_COMPLETED') "
+            + "AND con.Status NOT IN (N'PENDING_PAYMENT', N'PAYMENT_EXPIRED', N'CANCELLED', N'COMPLETED') "
             + "ORDER BY con.PickupAt DESC";
         try (Connection conn = DBContext.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql);

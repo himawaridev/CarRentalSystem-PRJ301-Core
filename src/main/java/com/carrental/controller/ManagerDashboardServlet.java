@@ -60,7 +60,7 @@ public class ManagerDashboardServlet extends HttpServlet {
                 request.setAttribute("drivers", driverDAO.getActiveDrivers());
             }
 
-            request.setAttribute("acceptedContracts", contractDAO.getContractsByStatus("ACCEPTED"));
+            request.setAttribute("acceptedContracts", contractDAO.getContractsByStatus("CONFIRMED"));
 
             // Active assignments table
             request.setAttribute("activeAssignments", driverDAO.getActiveAssignments());

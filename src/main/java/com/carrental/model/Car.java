@@ -27,6 +27,7 @@ public class Car {
     // Joined fields from Car_Types
     private String typeName;
     private int seatCount;
+    private int availableQuantity;
 
     public Car() {}
 
@@ -84,6 +85,9 @@ public class Car {
 
     public int getSeatCount() { return seatCount; }
     public void setSeatCount(int seatCount) { this.seatCount = seatCount; }
+
+    public int getAvailableQuantity() { return availableQuantity; }
+    public void setAvailableQuantity(int availableQuantity) { this.availableQuantity = Math.max(availableQuantity, 0); }
 
     @Override
     public String toString() {
