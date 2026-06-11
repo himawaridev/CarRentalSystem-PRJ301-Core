@@ -17,6 +17,7 @@ bo sung tinh nang.
 - Chuc nang theo vai tro
 - Luong dat xe va thanh toan
 - Trang thai hop dong, thanh toan va hoan tien
+- Huong dan clone va chay nhanh
 - Cau hinh database
 - Cau hinh PayOS va ngrok
 - Cach chay du an
@@ -24,6 +25,156 @@ bo sung tinh nang.
 - Cac script SQL quan trong
 - Kiem thu nhanh
 - Loi thuong gap
+
+## Huong dan clone va chay nhanh
+
+Phan nay danh cho may moi clone project tu GitHub.
+
+### 1. Cai dat moi truong
+
+Can co:
+
+- JDK 17.
+- Apache Tomcat 10.1.x.
+- NetBeans co Java Web/Maven support, hoac Maven trong PATH.
+- Microsoft SQL Server.
+- SSMS hoac cong cu co the chay file `.sql`.
+
+Nen dat bien moi truong:
+
+```text
+JAVA_HOME=C:\Program Files\Java\jdk-17
+```
+
+Neu dung NetBeans, them Tomcat trong:
+
+```text
+Window > Services > Servers > Add Server > Apache Tomcat or TomEE
+```
+
+Chon dung thu muc Tomcat tren may cua ban. Vi du:
+
+```text
+F:\Tomcat
+```
+
+Trong project:
+
+```text
+Right click project > Properties > Run
+```
+
+Chon server Tomcat vua them va de context path:
+
+```text
+/CarRentalSystem
+```
+
+### 2. Cau hinh SQL Server
+
+Project mac dinh ket noi:
+
+```text
+jdbc:sqlserver://localhost:1433;databaseName=CarRentalDB
+username: sa
+password: Dung22102003@@@
+```
+
+Can dam bao SQL Server:
+
+- dang chay,
+- bat SQL Server Authentication hoac Mixed Mode,
+- login `sa` duoc enable,
+- TCP/IP enabled,
+- port `1433` mo.
+
+Neu may ban dung username/password khac, sua file:
+
+```text
+src/main/java/com/carrental/config/DBContext.java
+```
+
+### 3. Tao database va nap du lieu mau
+
+Mo SSMS, ket noi SQL Server, chay lan luot:
+
+```text
+sql/database-schema.sql
+sql/seed-demo-data.sql
+sql/seed-payos-test-cars.sql
+sql/seed-fleet-quantity-demo-cars.sql
+```
+
+Cac file seed da co `ImageUrl` online tu `4kwallpapers.com`, nen sau khi clone va seed DB,
+trang danh sach xe se hien anh neu may co internet.
+
+Co the chay script kiem tra:
+
+```text
+sql/check-payment-refactor.sql
+sql/diagnose-sql-connection.sql
+```
+
+### 4. Build va chay
+
+Bang NetBeans:
+
+```text
+Right click project > Clean and Build
+Right click project > Run
+```
+
+Bang Maven:
+
+```powershell
+mvn clean package
+```
+
+Sau do deploy file:
+
+```text
+target/CarRentalSystem.war
+```
+
+vao Tomcat 10.1.x.
+
+URL mac dinh:
+
+```text
+http://localhost:9999/CarRentalSystem/search
+```
+
+Neu Tomcat dung port khac, thay `9999` bang port cua may do.
+
+### 5. Tai khoan dang nhap mau
+
+```text
+admin/admin123
+staff01/staff123
+manager01/manager123
+driver01/driver123
+customer01/cust123
+```
+
+### 6. Cau hinh thanh toan PayOS neu can test QR that
+
+Tao file local, khong commit:
+
+```text
+config/payment-local.properties
+```
+
+Noi dung mau:
+
+```properties
+PAYOS_CLIENT_ID=your_client_id
+PAYOS_API_KEY=your_api_key
+PAYOS_CHECKSUM_KEY=your_checksum_key
+APP_BASE_URL=http://localhost:9999/CarRentalSystem
+```
+
+Neu khong cau hinh PayOS, cac trang public, dang nhap, quan ly xe, tim xe van chay;
+phan tao QR thanh toan that se bao thieu cau hinh.
 
 ## Tong quan nghiep vu
 

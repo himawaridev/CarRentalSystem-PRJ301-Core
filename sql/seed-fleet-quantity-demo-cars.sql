@@ -66,6 +66,27 @@ WHEN NOT MATCHED THEN
 
 COMMIT TRANSACTION;
 
+-- Demo car images from 4kwallpapers.com.
+UPDATE dbo.Cars
+SET ImageUrl = CASE LicensePlate
+    WHEN N'51A-123.46' THEN N'https://4kwallpapers.com/images/walls/thumbs_2t/16338.jpg'
+    WHEN N'51A-123.47' THEN N'https://4kwallpapers.com/images/walls/thumbs_2t/16338.jpg'
+    WHEN N'51A-345.68' THEN N'https://4kwallpapers.com/images/walls/thumbs_2t/7826.jpg'
+    WHEN N'51B-222.23' THEN N'https://4kwallpapers.com/images/walls/thumbs_2t/24409.jpg'
+    WHEN N'51B-222.24' THEN N'https://4kwallpapers.com/images/walls/thumbs_2t/24409.jpg'
+    WHEN N'51B-333.34' THEN N'https://4kwallpapers.com/images/walls/thumbs_2t/16004.jpeg'
+    WHEN N'51C-555.56' THEN N'https://4kwallpapers.com/images/walls/thumbs_2t/6991.jpg'
+    WHEN N'51C-555.57' THEN N'https://4kwallpapers.com/images/walls/thumbs_2t/6991.jpg'
+    WHEN N'51C-444.45' THEN N'https://4kwallpapers.com/images/walls/thumbs_2t/22640.jpg'
+    ELSE ImageUrl
+END,
+UpdatedAt = SYSUTCDATETIME()
+WHERE LicensePlate IN (
+    N'51A-123.46', N'51A-123.47', N'51A-345.68',
+    N'51B-222.23', N'51B-222.24', N'51B-333.34',
+    N'51C-555.56', N'51C-555.57', N'51C-444.45'
+);
+
 SELECT Brand, Model, ManufactureYear, COUNT(*) AS AvailableQuantity,
        STRING_AGG(CONVERT(NVARCHAR(MAX), LicensePlate), N', ') AS AvailableLicensePlates
 FROM dbo.Cars

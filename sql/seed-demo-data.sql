@@ -200,6 +200,30 @@ IF NOT EXISTS (SELECT 1 FROM dbo.Cars WHERE LicensePlate = N'51B-999.99')
     VALUES (@Type5, N'51B-999.99', N'VinFast', N'VF 8', 2024, N'Xanh', N'AUTOMATIC', N'ELECTRIC', 2000, 1300000, 3500000, N'MAINTENANCE', N'VinFast VF 8 - xe dien VN');
 GO
 
+-- Demo car images from 4kwallpapers.com.
+-- Stored as remote image URLs so a fresh clone can display images after running this seed.
+UPDATE dbo.Cars
+SET ImageUrl = CASE LicensePlate
+    WHEN N'51A-123.45' THEN N'https://4kwallpapers.com/images/walls/thumbs_2t/16338.jpg'
+    WHEN N'51A-234.56' THEN N'https://4kwallpapers.com/images/walls/thumbs_2t/11004.jpeg'
+    WHEN N'51A-345.67' THEN N'https://4kwallpapers.com/images/walls/thumbs_2t/7826.jpg'
+    WHEN N'51B-111.11' THEN N'https://4kwallpapers.com/images/walls/thumbs_2t/24440.jpg'
+    WHEN N'51B-222.22' THEN N'https://4kwallpapers.com/images/walls/thumbs_2t/24409.jpg'
+    WHEN N'51B-333.33' THEN N'https://4kwallpapers.com/images/walls/thumbs_2t/16004.jpeg'
+    WHEN N'51C-444.44' THEN N'https://4kwallpapers.com/images/walls/thumbs_2t/22640.jpg'
+    WHEN N'51C-555.55' THEN N'https://4kwallpapers.com/images/walls/thumbs_2t/6991.jpg'
+    WHEN N'51C-666.66' THEN N'https://4kwallpapers.com/images/walls/thumbs_2t/23237.jpg'
+    WHEN N'51B-999.99' THEN N'https://4kwallpapers.com/images/walls/thumbs_2t/3652.jpg'
+    ELSE ImageUrl
+END,
+UpdatedAt = SYSUTCDATETIME()
+WHERE LicensePlate IN (
+    N'51A-123.45', N'51A-234.56', N'51A-345.67', N'51B-111.11',
+    N'51B-222.22', N'51B-333.33', N'51C-444.44', N'51C-555.55',
+    N'51C-666.66', N'51B-999.99'
+);
+GO
+
 SELECT N'admin' AS Username, N'admin123' AS Password, N'ADMIN' AS Roles
 UNION ALL SELECT N'staff01', N'staff123', N'STAFF'
 UNION ALL SELECT N'manager01', N'manager123', N'MANAGER + STAFF'

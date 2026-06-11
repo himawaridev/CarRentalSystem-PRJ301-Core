@@ -60,6 +60,19 @@ WHEN NOT MATCHED THEN
 
 COMMIT TRANSACTION;
 
+-- Demo car images from 4kwallpapers.com.
+UPDATE dbo.Cars
+SET ImageUrl = CASE LicensePlate
+    WHEN N'TEST-2K-01' THEN N'https://4kwallpapers.com/images/walls/thumbs_2t/16338.jpg'
+    WHEN N'TEST-2K-02' THEN N'https://4kwallpapers.com/images/walls/thumbs_2t/11004.jpeg'
+    WHEN N'TEST-2K-03' THEN N'https://4kwallpapers.com/images/walls/thumbs_2t/7826.jpg'
+    WHEN N'TEST-2K-04' THEN N'https://4kwallpapers.com/images/walls/thumbs_2t/24409.jpg'
+    WHEN N'TEST-2K-05' THEN N'https://4kwallpapers.com/images/walls/thumbs_2t/16004.jpeg'
+    ELSE ImageUrl
+END,
+UpdatedAt = SYSUTCDATETIME()
+WHERE LicensePlate LIKE N'TEST-2K-%';
+
 SELECT LicensePlate, Brand, Model, DailyRate, DepositAmount, Status
 FROM dbo.Cars
 WHERE LicensePlate LIKE N'TEST-2K-%'
