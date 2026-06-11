@@ -2,6 +2,7 @@ package com.carrental.dao;
 
 import com.carrental.config.DBContext;
 import com.carrental.model.Car;
+import com.carrental.model.CarGroup;
 import com.carrental.model.CarType;
 import java.math.BigDecimal;
 import java.sql.*;
@@ -56,6 +57,108 @@ public class CarDAO {
             int idx = 1;
             if (seatCount != null) ps.setInt(idx++, seatCount);
             if (brand != null && !brand.isBlank()) ps.setString(idx++, brand.trim());
+            if (minDailyRate != null) ps.setBigDecimal(idx++, minDailyRate);
+            if (maxDailyRate != null) ps.setBigDecimal(idx++, maxDailyRate);
+            ps.setTimestamp(idx++, Timestamp.valueOf(returnAt));
+            ps.setTimestamp(idx++, Timestamp.valueOf(pickupAt));
+            ps.setTimestamp(idx++, Timestamp.valueOf(returnAt));
+            ps.setTimestamp(idx++, Timestamp.valueOf(pickupAt));
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) cars.add(mapCar(rs));
+            }
+        } catch (SQLException e) { e.printStackTrace(); }
+        return cars;
+    }
+
+    public List<CarGroup> findAvailableCarGroups(
+            Integer seatCount,
+            String brand,
+            BigDecimal minDailyRate,
+            BigDecimal maxDailyRate,
+            LocalDateTime pickupAt,
+            LocalDateTime returnAt) {
+        List<CarGroup> groups = new ArrayList<>();
+        StringBuilder sql = new StringBuilder(
+            "SELECT c.Brand, c.Model, "
+            + "MIN(ct.TypeName) AS TypeName, "
+            + "MIN(ct.SeatCount) AS SeatCount, "
+            + "MAX(NULLIF(c.ImageUrl, N'')) AS ImageUrl, "
+            + "MIN(c.DailyRate) AS DailyRate, "
+            + "COUNT(*) AS AvailableCount "
+            + "FROM dbo.Cars c "
+            + "INNER JOIN dbo.Car_Types ct ON c.CarTypeID = ct.CarTypeID "
+            + "WHERE c.Status = N'AVAILABLE' ");
+        if (seatCount != null) sql.append("AND ct.SeatCount = ? ");
+        if (brand != null && !brand.isBlank()) sql.append("AND c.Brand = ? ");
+        if (minDailyRate != null) sql.append("AND c.DailyRate >= ? ");
+        if (maxDailyRate != null) sql.append("AND c.DailyRate <= ? ");
+        sql.append("AND NOT EXISTS (SELECT 1 FROM dbo.Contract_Details cd "
+            + "INNER JOIN dbo.Contracts con ON cd.ContractID = con.ContractID "
+            + "WHERE cd.CarID = c.CarID AND cd.DetailStatus <> N'CANCELLED' "
+            + "AND con.Status IN (N'RESERVED',N'CONFIRMED',N'CAR_PICKED_UP') "
+            + "AND con.PickupAt < ? AND con.ReturnAt > ?) ");
+        sql.append("AND NOT EXISTS (SELECT 1 FROM dbo.Car_Maintenance cm "
+            + "WHERE cm.CarID = c.CarID AND cm.Status IN (N'SCHEDULED',N'IN_PROGRESS') "
+            + "AND cm.StartAt < ? AND cm.EndAt > ?) ");
+        sql.append("GROUP BY c.Brand, c.Model "
+            + "ORDER BY MIN(c.DailyRate) ASC, c.Brand, c.Model");
+
+        try (Connection conn = DBContext.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+            int idx = 1;
+            if (seatCount != null) ps.setInt(idx++, seatCount);
+            if (brand != null && !brand.isBlank()) ps.setString(idx++, brand.trim());
+            if (minDailyRate != null) ps.setBigDecimal(idx++, minDailyRate);
+            if (maxDailyRate != null) ps.setBigDecimal(idx++, maxDailyRate);
+            ps.setTimestamp(idx++, Timestamp.valueOf(returnAt));
+            ps.setTimestamp(idx++, Timestamp.valueOf(pickupAt));
+            ps.setTimestamp(idx++, Timestamp.valueOf(returnAt));
+            ps.setTimestamp(idx++, Timestamp.valueOf(pickupAt));
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    groups.add(mapCarGroup(rs));
+                }
+            }
+        } catch (SQLException e) { e.printStackTrace(); }
+        return groups;
+    }
+
+    public List<Car> findSpecificAvailableCarsByGroup(
+            String brand,
+            String model,
+            Integer seatCount,
+            BigDecimal minDailyRate,
+            BigDecimal maxDailyRate,
+            LocalDateTime pickupAt,
+            LocalDateTime returnAt) {
+        List<Car> cars = new ArrayList<>();
+        StringBuilder sql = new StringBuilder(
+            "SELECT c.*, ct.TypeName, ct.SeatCount, "
+            + "COUNT(*) OVER (PARTITION BY c.Brand, c.Model) AS AvailableQuantity "
+            + "FROM dbo.Cars c "
+            + "INNER JOIN dbo.Car_Types ct ON c.CarTypeID = ct.CarTypeID "
+            + "WHERE c.Status = N'AVAILABLE' "
+            + "AND c.Brand = ? "
+            + "AND c.Model = ? ");
+        if (seatCount != null) sql.append("AND ct.SeatCount = ? ");
+        if (minDailyRate != null) sql.append("AND c.DailyRate >= ? ");
+        if (maxDailyRate != null) sql.append("AND c.DailyRate <= ? ");
+        sql.append("AND NOT EXISTS (SELECT 1 FROM dbo.Contract_Details cd "
+            + "INNER JOIN dbo.Contracts con ON cd.ContractID = con.ContractID "
+            + "WHERE cd.CarID = c.CarID AND cd.DetailStatus <> N'CANCELLED' "
+            + "AND con.Status IN (N'RESERVED',N'CONFIRMED',N'CAR_PICKED_UP') "
+            + "AND con.PickupAt < ? AND con.ReturnAt > ?) ");
+        sql.append("AND NOT EXISTS (SELECT 1 FROM dbo.Car_Maintenance cm "
+            + "WHERE cm.CarID = c.CarID AND cm.Status IN (N'SCHEDULED',N'IN_PROGRESS') "
+            + "AND cm.StartAt < ? AND cm.EndAt > ?) ");
+        sql.append("ORDER BY c.LicensePlate, c.Color, c.Mileage");
+
+        try (Connection conn = DBContext.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+            int idx = 1;
+            ps.setString(idx++, brand);
+            ps.setString(idx++, model);
+            if (seatCount != null) ps.setInt(idx++, seatCount);
             if (minDailyRate != null) ps.setBigDecimal(idx++, minDailyRate);
             if (maxDailyRate != null) ps.setBigDecimal(idx++, maxDailyRate);
             ps.setTimestamp(idx++, Timestamp.valueOf(returnAt));
@@ -270,6 +373,57 @@ public class CarDAO {
         return null;
     }
 
+    public Car findAvailableCarById(
+            int carId,
+            LocalDateTime pickupAt,
+            LocalDateTime returnAt,
+            Set<Integer> excludedCarIds) {
+        StringBuilder sql = new StringBuilder(
+            "SELECT c.*, ct.TypeName, ct.SeatCount, 1 AS AvailableQuantity "
+            + "FROM dbo.Cars c "
+            + "INNER JOIN dbo.Car_Types ct ON c.CarTypeID = ct.CarTypeID "
+            + "WHERE c.CarID = ? "
+            + "AND c.Status = N'AVAILABLE' "
+            + "AND NOT EXISTS (SELECT 1 FROM dbo.Contract_Details cd "
+            + "INNER JOIN dbo.Contracts con ON cd.ContractID = con.ContractID "
+            + "WHERE cd.CarID = c.CarID AND cd.DetailStatus <> N'CANCELLED' "
+            + "AND con.Status IN (N'RESERVED',N'CONFIRMED',N'CAR_PICKED_UP') "
+            + "AND con.PickupAt < ? AND con.ReturnAt > ?) "
+            + "AND NOT EXISTS (SELECT 1 FROM dbo.Car_Maintenance cm "
+            + "WHERE cm.CarID = c.CarID AND cm.Status IN (N'SCHEDULED',N'IN_PROGRESS') "
+            + "AND cm.StartAt < ? AND cm.EndAt > ?) ");
+
+        if (excludedCarIds != null && !excludedCarIds.isEmpty()) {
+            sql.append("AND c.CarID NOT IN (");
+            for (int i = 0; i < excludedCarIds.size(); i++) {
+                if (i > 0) sql.append(",");
+                sql.append("?");
+            }
+            sql.append(") ");
+        }
+
+        try (Connection conn = DBContext.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+            int idx = 1;
+            ps.setInt(idx++, carId);
+            ps.setTimestamp(idx++, Timestamp.valueOf(returnAt));
+            ps.setTimestamp(idx++, Timestamp.valueOf(pickupAt));
+            ps.setTimestamp(idx++, Timestamp.valueOf(returnAt));
+            ps.setTimestamp(idx++, Timestamp.valueOf(pickupAt));
+            if (excludedCarIds != null) {
+                for (Integer excludedId : excludedCarIds) {
+                    ps.setInt(idx++, excludedId);
+                }
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return mapCar(rs);
+                }
+            }
+        } catch (SQLException e) { e.printStackTrace(); }
+        return null;
+    }
+
     public List<CarType> getAllCarTypes() {
         List<CarType> types = new ArrayList<>();
         String sql = "SELECT CarTypeID, TypeName, SeatCount, Description FROM dbo.Car_Types ORDER BY SeatCount";
@@ -341,6 +495,18 @@ public class CarDAO {
         c.setSeatCount(rs.getInt("SeatCount"));
         c.setAvailableQuantity(getOptionalInt(rs, "AvailableQuantity", "AVAILABLE".equals(c.getStatus()) ? 1 : 0));
         return c;
+    }
+
+    private CarGroup mapCarGroup(ResultSet rs) throws SQLException {
+        CarGroup group = new CarGroup();
+        group.setBrand(rs.getString("Brand"));
+        group.setModel(rs.getString("Model"));
+        group.setImageUrl(rs.getString("ImageUrl"));
+        group.setDailyRate(rs.getBigDecimal("DailyRate"));
+        group.setAvailableCount(rs.getInt("AvailableCount"));
+        group.setSeatCount(rs.getInt("SeatCount"));
+        group.setTypeName(rs.getString("TypeName"));
+        return group;
     }
 
     private int getOptionalInt(ResultSet rs, String columnName, int defaultValue) throws SQLException {

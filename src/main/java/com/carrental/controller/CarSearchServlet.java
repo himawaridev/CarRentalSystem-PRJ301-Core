@@ -2,6 +2,7 @@ package com.carrental.controller;
 
 import com.carrental.dao.CarDAO;
 import com.carrental.model.Car;
+import com.carrental.model.CarGroup;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -79,7 +80,7 @@ public class CarSearchServlet extends HttpServlet {
         }
 
         CarDAO carDAO = new CarDAO();
-        List<Car> cars = carDAO.findAvailableCars(
+        List<CarGroup> carGroups = carDAO.findAvailableCarGroups(
                 seatCount,
                 brandFilter,
                 minPrice,
@@ -87,7 +88,7 @@ public class CarSearchServlet extends HttpServlet {
                 pickupAt,
                 returnAt);
 
-        request.setAttribute("cars", cars);
+        request.setAttribute("carGroups", carGroups);
         forwardSearch(request, response);
     }
 

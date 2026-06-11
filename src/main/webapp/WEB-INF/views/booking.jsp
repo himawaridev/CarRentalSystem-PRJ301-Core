@@ -35,6 +35,7 @@
                     <form method="post" action="${pageContext.request.contextPath}/book" id="bookingForm">
                         <input type="hidden" name="pickupAt" value="${pickupAt}">
                         <input type="hidden" name="returnAt" value="${returnAt}">
+                        <input type="hidden" name="selectionMode" value="${selectionMode}">
 
                         <c:forEach var="car" items="${selectedCars}" varStatus="st">
                             <div class="car-card mb-3">
@@ -103,11 +104,11 @@
                             </div>
                         </div>
 
-                        <div class="text-end mt-4">
-                            <a href="${pageContext.request.contextPath}/search" class="btn btn-outline-accent me-2">
+                        <div class="btn-action-group justify-content-end mt-4">
+                            <a href="${pageContext.request.contextPath}/search" class="btn btn-outline-accent btn-action-nowrap">
                                 <i class="bi bi-arrow-left me-1"></i>Quay lai
                             </a>
-                            <button type="submit" class="btn btn-accent px-4">
+                            <button type="submit" class="btn btn-accent btn-action-nowrap px-4">
                                 <i class="bi bi-credit-card me-1"></i>Tiep tuc thanh toan
                             </button>
                         </div>
