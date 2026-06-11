@@ -99,7 +99,7 @@
                                    value="${returnAt}" required>
                         </div>
                         <div class="col-12">
-                            <button type="submit" class="btn btn-accent w-100">
+                            <button type="submit" class="btn btn-accent btn-action-nowrap w-100">
                                 <i class="bi bi-search me-1"></i>Tim kiem
                             </button>
                         </div>
@@ -111,7 +111,7 @@
 </section>
 
 <!-- ===== WHY CHOOSE US ===== -->
-<c:if test="${empty cars and empty pickupAt}">
+<c:if test="${empty carGroups and empty pickupAt}">
 <section class="why-section">
     <div class="container">
         <h2 class="section-title text-center">Tai sao chon <span class="text-gradient">CarRental</span>?</h2>
@@ -186,7 +186,7 @@
                                     <c:url var="brandCarsUrl" value="/cars">
                                         <c:param name="brand" value="${brandEntry.key}" />
                                     </c:url>
-                                    <a href="${brandCarsUrl}" class="btn btn-outline-accent btn-sm w-100">
+                                    <a href="${brandCarsUrl}" class="btn btn-outline-accent btn-action-nowrap btn-sm w-100">
                                         <i class="bi bi-grid me-1"></i>Xem cac xe ${brandEntry.key}
                                     </a>
                                 </div>
@@ -216,28 +216,21 @@
 </c:if>
 
 <!-- ===== SEARCH RESULTS ===== -->
-<c:if test="${not empty cars}">
+<c:if test="${not empty carGroups}">
 <div class="container py-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h4 class="page-heading mb-0"><i class="bi bi-car-front"></i>Ket qua: ${cars.size()} dong xe kha dung</h4>
-        <form id="bookForm" method="get" action="${pageContext.request.contextPath}/book">
-            <input type="hidden" name="pickupAt" value="${pickupAt}">
-            <input type="hidden" name="returnAt" value="${returnAt}">
-            <div id="selectedCarIds"></div>
-            <button type="submit" class="btn btn-accent" id="bookBtn" disabled>
-                <i class="bi bi-cart-plus me-1"></i>Dat xe da chon (<span id="selectedCount">0</span>)
-            </button>
-        </form>
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+        <h4 class="page-heading mb-0"><i class="bi bi-car-front"></i>Ket qua: ${fn:length(carGroups)} dong xe kha dung</h4>
+        <span class="text-muted small">Chon dong xe de xem bien so cu the</span>
     </div>
 
     <div class="row g-4">
-        <c:forEach var="car" items="${cars}">
+        <c:forEach var="group" items="${carGroups}">
             <div class="col-md-6 col-lg-4">
-                <div class="car-card" id="carCard-${car.carId}">
-                    <c:set var="searchImageSrc" value="${empty car.imageUrl ? placeholderImage : car.imageUrl}" />
+                <div class="car-card car-group-card">
+                    <c:set var="searchImageSrc" value="${empty group.imageUrl ? placeholderImage : group.imageUrl}" />
                     <div class="search-car-visual mb-3">
                         <img src="${searchImageSrc}"
-                             alt="${car.brand} ${car.model}"
+                             alt="${group.brand} ${group.model}"
                              class="search-car-image"
                              loading="lazy"
                              decoding="async"
@@ -245,35 +238,39 @@
                     </div>
                     <div class="d-flex justify-content-between align-items-start mb-2">
                         <div>
-                            <div class="car-brand">${car.brand} ${car.model}</div>
-                            <div class="text-muted small">He thong se tu gan xe kha dung khi dat</div>
+                            <div class="car-brand">${group.brand} ${group.model}</div>
+                            <div class="text-muted small">Co ${group.availableCount} xe kha dung trong thoi gian nay</div>
                         </div>
-                        <div class="form-check">
-                            <input class="form-check-input car-checkbox" type="checkbox"
-                                   value="${car.carId}" data-car-id="${car.carId}"
-                                   onchange="updateSelection()">
-                        </div>
+                        <span class="brand-count-badge">${group.availableCount}</span>
                     </div>
                     <div class="mb-2">
-                        <span class="car-tag"><i class="bi bi-people me-1"></i>${car.seatCount} cho</span>
-                        <c:if test="${not empty car.transmission}">
-                            <span class="car-tag"><i class="bi bi-gear me-1"></i>${car.transmission}</span>
-                        </c:if>
-                        <c:if test="${not empty car.fuelType}">
-                            <span class="car-tag"><i class="bi bi-fuel-pump me-1"></i>${car.fuelType}</span>
-                        </c:if>
-                        <span class="car-tag"><i class="bi bi-stack me-1"></i>Con ${car.availableQuantity} xe cung mau</span>
+                        <span class="car-tag"><i class="bi bi-people me-1"></i>${group.seatCount} cho</span>
+                        <span class="car-tag"><i class="bi bi-stack me-1"></i>${group.availableCount} xe</span>
                     </div>
-                    <c:if test="${car.manufactureYear != null}">
-                        <div class="text-muted small mb-1"><i class="bi bi-calendar3 me-1"></i>Nam SX: ${car.manufactureYear}</div>
-                    </c:if>
                     <div class="divider"></div>
-                    <div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap">
                         <div>
-                            <div class="car-price"><fmt:formatNumber value="${car.dailyRate}" pattern="#,###"/> VND<span class="text-muted small">/ngay</span></div>
-                            <div class="text-muted small">Dat coc: <fmt:formatNumber value="${car.depositAmount}" pattern="#,###"/> VND</div>
+                            <div class="car-price"><fmt:formatNumber value="${group.dailyRate}" pattern="#,###"/> VND<span class="text-muted small">/ngay</span></div>
+                            <div class="text-muted small">Gia hien thi la muc thap nhat cua nhom</div>
                         </div>
-                        <i class="bi bi-car-front car-icon"></i>
+                        <c:url var="selectCarUrl" value="/select-car">
+                            <c:param name="brand" value="${group.brand}" />
+                            <c:param name="model" value="${group.model}" />
+                            <c:param name="pickupAt" value="${pickupAt}" />
+                            <c:param name="returnAt" value="${returnAt}" />
+                            <c:if test="${not empty seatCount}">
+                                <c:param name="seatCount" value="${seatCount}" />
+                            </c:if>
+                            <c:if test="${not empty minPrice}">
+                                <c:param name="minPrice" value="${minPrice}" />
+                            </c:if>
+                            <c:if test="${not empty maxPrice}">
+                                <c:param name="maxPrice" value="${maxPrice}" />
+                            </c:if>
+                        </c:url>
+                        <a href="${selectCarUrl}" class="btn btn-accent btn-action-nowrap">
+                            <i class="bi bi-list-check me-1"></i>View Available Cars
+                        </a>
                     </div>
                 </div>
             </div>
@@ -282,35 +279,12 @@
 </div>
 </c:if>
 
-<c:if test="${not empty pickupAt and empty cars}">
+<c:if test="${not empty pickupAt and empty carGroups}">
 <div class="container mt-5 text-center" style="padding-bottom:60px">
     <i class="bi bi-emoji-frown" style="font-size:4rem;color:var(--gray-300)"></i>
     <h4 class="text-muted mt-3">Khong tim thay xe phu hop</h4>
     <p class="text-muted">Vui long thu lai voi ngay khac, thuong hieu khac hoac khoang gia rong hon.</p>
 </div>
 </c:if>
-
-<script>
-function updateSelection() {
-    const checked = document.querySelectorAll('.car-checkbox:checked');
-    document.getElementById('selectedCount').textContent = checked.length;
-    document.getElementById('bookBtn').disabled = checked.length === 0;
-
-    const container = document.getElementById('selectedCarIds');
-    container.innerHTML = '';
-    checked.forEach(cb => {
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = 'carId';
-        input.value = cb.value;
-        container.appendChild(input);
-    });
-
-    document.querySelectorAll('.car-card').forEach(card => card.style.borderColor = 'var(--border)');
-    checked.forEach(cb => {
-        document.getElementById('carCard-' + cb.dataset.carId).style.borderColor = 'var(--primary)';
-    });
-}
-</script>
 
 <jsp:include page="/WEB-INF/includes/footer.jsp"/>
