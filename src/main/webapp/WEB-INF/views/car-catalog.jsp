@@ -13,7 +13,7 @@
     </div>
 </div>
 
-<div class="container py-4">
+<div class="container py-4 ${not empty cars ? 'catalog-content-has-fixed-selection' : ''}">
 
     <!-- Filters -->
     <div class="catalog-filter-bar mb-4">
@@ -66,18 +66,18 @@
                 </a>
             </div>
             <div class="ms-auto">
-                <span class="text-muted small"><i class="bi bi-car-front me-1"></i>Hien thi <strong>${cars.size()}</strong> dong xe</span>
+                <span class="text-muted small"><i class="bi bi-car-front me-1"></i>Hien thi <strong>${cars.size()}</strong> xe</span>
             </div>
         </form>
     </div>
 
     <c:if test="${not empty cars}">
-        <div class="catalog-selection-bar mb-4">
+        <div class="catalog-selection-bar catalog-selection-fixed">
             <div>
                 <span class="text-muted small">Xe da chon</span>
                 <strong class="ms-2"><span id="selectedCatalogCount">0</span></strong>
             </div>
-            <button type="button" class="btn btn-accent btn-sm px-4" id="catalogBookBtn"
+            <button type="button" class="btn btn-accent btn-action-nowrap btn-sm px-4" id="catalogBookBtn"
                     onclick="openBookingModal()" disabled>
                 <i class="bi bi-calendar-check me-1"></i>Dat xe da chon
             </button>
@@ -97,24 +97,14 @@
         <c:forEach var="car" items="${cars}" varStatus="loop">
             <div class="col-md-6 col-lg-4">
                 <div class="catalog-card" id="catalogCard-${car.carId}">
-                    <!-- Card header with car icon -->
                     <div class="catalog-card-visual">
-                        <div class="swiper car-image-swiper" data-slider="car-images">
-                            <div class="swiper-wrapper">
-                                <c:forEach var="imageCar" items="${brandCarGroups[car.brand]}">
-                                    <c:set var="catalogImageSrc" value="${empty imageCar.imageUrl ? placeholderImage : imageCar.imageUrl}" />
-                                    <div class="swiper-slide">
-                                        <img src="${catalogImageSrc}"
-                                             alt="${imageCar.brand} ${imageCar.model}"
-                                             class="car-card-image"
-                                             loading="lazy"
-                                             decoding="async"
-                                             onerror="this.onerror=null;this.src='${placeholderImage}';">
-                                    </div>
-                                </c:forEach>
-                            </div>
-                            <div class="swiper-pagination car-image-pagination"></div>
-                        </div>
+                        <c:set var="catalogImageSrc" value="${empty car.imageUrl ? placeholderImage : car.imageUrl}" />
+                        <img src="${catalogImageSrc}"
+                             alt="${car.brand} ${car.model} ${car.licensePlate}"
+                             class="car-card-image"
+                             loading="lazy"
+                             decoding="async"
+                             onerror="this.onerror=null;this.src='${placeholderImage}';">
                         <c:choose>
                             <c:when test="${car.status == 'AVAILABLE'}">
                                 <span class="catalog-status catalog-status-available">
@@ -137,7 +127,12 @@
                     <!-- Card body -->
                     <div class="catalog-card-body">
                         <div class="d-flex justify-content-between align-items-start gap-3">
-                            <h5 class="catalog-car-name">${car.brand} ${car.model}</h5>
+                            <div>
+                                <h5 class="catalog-car-name">${car.brand} ${car.model}</h5>
+                                <div class="catalog-plate">
+                                    <i class="bi bi-upc-scan me-1"></i>${car.licensePlate}
+                                </div>
+                            </div>
                             <c:if test="${car.status == 'AVAILABLE'}">
                                 <div class="form-check m-0">
                                     <input class="form-check-input catalog-car-checkbox" type="checkbox"
@@ -172,8 +167,18 @@
                                 </div>
                             </c:if>
                             <div class="catalog-spec">
-                                <i class="bi bi-stack"></i>
-                                <span>Con ${car.availableQuantity} xe</span>
+                                <i class="bi bi-speedometer2"></i>
+                                <span><fmt:formatNumber value="${car.mileage}" pattern="#,###"/> km</span>
+                            </div>
+                            <c:if test="${not empty car.color}">
+                                <div class="catalog-spec">
+                                    <i class="bi bi-palette-fill"></i>
+                                    <span>${car.color}</span>
+                                </div>
+                            </c:if>
+                            <div class="catalog-spec">
+                                <i class="bi bi-upc"></i>
+                                <span>${car.licensePlate}</span>
                             </div>
                         </div>
 
@@ -192,9 +197,9 @@
                                 </div>
                             </div>
                             <c:if test="${car.status == 'AVAILABLE'}">
-                                <button type="button" class="btn btn-accent btn-sm catalog-select-btn"
+                                <button type="button" class="btn btn-accent btn-action-nowrap btn-sm catalog-select-btn"
                                         id="selectBtn-${car.carId}" onclick="toggleCatalogSelection(${car.carId})">
-                                    <i class="bi bi-check2-square me-1"></i>Chon
+                                    <i class="bi bi-check2-square"></i><span>Chon</span>
                                 </button>
                             </c:if>
                         </div>
@@ -210,6 +215,7 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <form id="directBookForm" method="get" action="${pageContext.request.contextPath}/book">
+                <input type="hidden" name="selectionMode" value="specific">
                 <div id="selectedCatalogCarIds"></div>
                 <div class="modal-header">
                     <h5 class="modal-title">
@@ -231,8 +237,8 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-accent" data-bs-dismiss="modal">Huy</button>
-                    <button type="submit" class="btn btn-accent">
+                    <button type="button" class="btn btn-outline-accent btn-action-nowrap" data-bs-dismiss="modal">Huy</button>
+                    <button type="submit" class="btn btn-accent btn-action-nowrap">
                         <i class="bi bi-arrow-right me-1"></i>Tiep tuc dat xe
                     </button>
                 </div>
@@ -258,7 +264,8 @@ function updateCatalogSelection() {
         card.classList.remove('catalog-card-selected');
     });
     document.querySelectorAll('.catalog-select-btn').forEach(function(button) {
-        button.innerHTML = '<i class="bi bi-check2-square me-1"></i>Chon';
+        button.classList.remove('catalog-select-btn-active');
+        button.innerHTML = '<i class="bi bi-check2-square"></i><span>Chon</span>';
     });
 
     checked.forEach(function(cb) {
@@ -268,7 +275,8 @@ function updateCatalogSelection() {
             card.classList.add('catalog-card-selected');
         }
         if (button) {
-            button.innerHTML = '<i class="bi bi-check-circle me-1"></i>Da chon';
+            button.classList.add('catalog-select-btn-active');
+            button.innerHTML = '<i class="bi bi-check-circle"></i><span>Da chon</span>';
         }
     });
 }

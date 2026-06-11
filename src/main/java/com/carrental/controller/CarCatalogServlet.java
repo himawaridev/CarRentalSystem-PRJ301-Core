@@ -9,9 +9,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 @WebServlet("/cars")
 public class CarCatalogServlet extends HttpServlet {
@@ -20,7 +18,7 @@ public class CarCatalogServlet extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         CarDAO carDAO = new CarDAO();
-        List<Car> allCars = carDAO.getCatalogCarGroups();
+        List<Car> allCars = carDAO.getAllCars();
 
         String seatFilter = request.getParameter("seats");
         String brandFilter = normalize(request.getParameter("brand"));
@@ -59,7 +57,6 @@ public class CarCatalogServlet extends HttpServlet {
 
         request.setAttribute("cars", filtered);
         request.setAttribute("allCars", allCars);
-        request.setAttribute("brandCarGroups", groupCarsByBrand(allCars));
         request.setAttribute("brands", carDAO.getAvailableBrands());
         request.setAttribute("seatCounts", carDAO.getAvailableSeatCounts());
         request.setAttribute("seatFilter", seatFilter);
@@ -95,17 +92,5 @@ public class CarCatalogServlet extends HttpServlet {
 
     private String normalize(String value) {
         return value == null ? null : value.trim();
-    }
-
-    private Map<String, List<Car>> groupCarsByBrand(List<Car> cars) {
-        Map<String, List<Car>> groups = new LinkedHashMap<>();
-        for (Car car : cars) {
-            String brand = normalize(car.getBrand());
-            if (brand == null || brand.isBlank()) {
-                brand = "Khac";
-            }
-            groups.computeIfAbsent(brand, key -> new java.util.ArrayList<>()).add(car);
-        }
-        return groups;
     }
 }
