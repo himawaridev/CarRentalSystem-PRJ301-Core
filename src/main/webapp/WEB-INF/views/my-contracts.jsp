@@ -33,9 +33,9 @@
                         <th>Ngay tra</th>
                         <th>Dat coc</th>
                         <th>Tong tien</th>
-                        <th>Trang thai</th>
+                        <th class="table-status-col">Trang thai</th>
                         <th>Ngay tao</th>
-                        <th></th>
+                        <th class="table-actions-col">Hanh dong</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -46,7 +46,7 @@
                             <td>${c.returnAt}</td>
                             <td><fmt:formatNumber value="${c.depositAmountDue}" pattern="#,###"/></td>
                             <td><fmt:formatNumber value="${c.finalAmountDue}" pattern="#,###"/></td>
-                            <td>
+                            <td class="table-status-cell">
                                 <c:choose>
                                     <c:when test="${c.status == 'PENDING_PAYMENT'}"><span class="badge-status badge-pending">Cho thanh toan</span></c:when>
                                     <c:when test="${c.status == 'PAYMENT_EXPIRED'}"><span class="badge-status badge-rejected">Het han</span></c:when>
@@ -61,31 +61,46 @@
                                 </c:choose>
                             </td>
                             <td class="text-muted small">${c.createdAt}</td>
-                            <td>
-                                <div class="d-flex gap-1 align-items-center">
+                            <td class="table-actions-cell">
+                                <div class="table-action-icons">
                                     <a href="${pageContext.request.contextPath}/contract-detail?id=${c.contractId}"
-                                       class="btn btn-sm btn-outline-accent">
-                                        <i class="bi bi-eye me-1"></i>Chi tiet
+                                       class="btn btn-sm btn-outline-accent action-icon-btn"
+                                       data-bs-toggle="tooltip" data-bs-title="Chi tiet hop dong"
+                                       aria-label="Chi tiet hop dong">
+                                        <i class="bi bi-eye"></i>
                                     </a>
                                     <c:if test="${c.status == 'PENDING_PAYMENT' && not empty pendingPaymentRefs[c.contractId]}">
                                         <a href="${pageContext.request.contextPath}/payment/pending?ref=${pendingPaymentRefs[c.contractId]}"
-                                           class="btn btn-sm btn-accent">
-                                            <i class="bi bi-credit-card me-1"></i>Thanh toan
+                                           class="btn btn-sm btn-accent action-icon-btn"
+                                           data-bs-toggle="tooltip" data-bs-title="Thanh toan"
+                                           aria-label="Thanh toan">
+                                            <i class="bi bi-credit-card"></i>
                                         </a>
                                     </c:if>
+                                    <c:if test="${pendingRefundContractIds.contains(c.contractId)}">
+                                        <span class="status-chip status-chip-waiting"
+                                              data-bs-toggle="tooltip" data-bs-title="Dang cho nhan vien hoan tien">
+                                            <i class="bi bi-arrow-counterclockwise"></i>
+                                        </span>
+                                    </c:if>
                                     <!-- Cancel button: only show for cancellable statuses -->
-                                    <c:if test="${c.status == 'PENDING_PAYMENT'}">
+                                    <c:if test="${cancellableContractIds.contains(c.contractId)}">
                                         <form method="post" action="${pageContext.request.contextPath}/my-contracts" class="d-inline"
                                               onsubmit="return confirm('Ban co chac chan muon huy hop dong ${c.contractCode}?\n\nHanh dong nay khong the hoan tac!')">
                                             <input type="hidden" name="action" value="cancel">
                                             <input type="hidden" name="contractId" value="${c.contractId}">
-                                            <button type="submit" class="btn btn-sm btn-outline-danger">
-                                                <i class="bi bi-x-circle me-1"></i>Huy
+                                            <button type="submit" class="btn btn-sm btn-outline-danger action-icon-btn"
+                                                    data-bs-toggle="tooltip" data-bs-title="Huy hop dong"
+                                                    aria-label="Huy hop dong">
+                                                <i class="bi bi-x-circle"></i>
                                             </button>
                                         </form>
                                     </c:if>
                                     <c:if test="${c.status == 'CAR_PICKED_UP'}">
-                                        <span class="text-muted small"><i class="bi bi-lock me-1"></i>Dang thue</span>
+                                        <span class="status-chip status-chip-muted"
+                                              data-bs-toggle="tooltip" data-bs-title="Khach dang thue xe">
+                                            <i class="bi bi-lock"></i>
+                                        </span>
                                     </c:if>
                                 </div>
                             </td>

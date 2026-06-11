@@ -2,6 +2,7 @@ package com.carrental.controller;
 
 import com.carrental.dao.ContractDAO;
 import com.carrental.dao.PaymentDAO;
+import com.carrental.dao.UserDAO;
 import com.carrental.model.Contract;
 import com.carrental.model.ContractStatus;
 import com.carrental.model.Refund;
@@ -10,6 +11,7 @@ import com.carrental.model.SettlementResult;
 import com.carrental.model.User;
 import com.carrental.model.CheckoutResult;
 import com.carrental.service.CheckoutService;
+import com.carrental.service.RefundQrBuilder;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -41,10 +43,20 @@ public class SettlementServlet extends HttpServlet {
         PaymentDAO paymentDAO = new PaymentDAO();
         SettlementResult settlement = paymentDAO.calculateSettlement(contractId);
         Refund pendingRefund = paymentDAO.getPendingRefundByContractId(contractId);
+        User customerUser = new UserDAO().getUserByCustomerId(contract.getCustomerId());
+        String refundQrUrl = null;
+        if (pendingRefund != null && customerUser != null && customerUser.hasRefundBankInfo()) {
+            refundQrUrl = new RefundQrBuilder().buildRefundQrUrl(
+                    customerUser,
+                    pendingRefund.getRefundAmount(),
+                    "HOAN " + contract.getContractCode() + " RF" + pendingRefund.getRefundId());
+        }
 
         request.setAttribute("contract", contract);
         request.setAttribute("settlement", settlement);
         request.setAttribute("pendingRefund", pendingRefund);
+        request.setAttribute("customerUser", customerUser);
+        request.setAttribute("refundQrUrl", refundQrUrl);
 
         HttpSession session = request.getSession(false);
         if (session != null) {
@@ -89,7 +101,26 @@ public class SettlementServlet extends HttpServlet {
                 session.setAttribute(ok ? "flashSuccess" : "flashError",
                         ok ? "Da ghi nhan thu them thanh cong." : "Ghi nhan thu them that bai.");
             }
-        } else if ("processCheckout".equals(action) || "createRefund".equals(action)) {
+        } else if ("createRefund".equals(action)) {
+            UserDAO userDAO = new UserDAO();
+            ContractDAO contractDAO = new ContractDAO();
+            Contract contract = contractDAO.getContractById(contractId);
+            User customerUser = contract == null ? null : userDAO.getUserByCustomerId(contract.getCustomerId());
+            if (customerUser == null || !customerUser.hasRefundBankInfo()) {
+                session.setAttribute("flashError",
+                        "Khach hang chua co tai khoan ngan hang nhan hoan tien. Hay yeu cau khach cap nhat profile.");
+            } else {
+                Refund refund = paymentDAO.createRefundRequest(
+                        contractId,
+                        user.getUserId(),
+                        request.getParameter("reason"),
+                        RefundMethod.MANUAL_BANK_TRANSFER);
+                session.setAttribute(refund != null ? "flashSuccess" : "flashError",
+                        refund != null
+                                ? "Da tao ma QR hoan tien cho nhan vien quet."
+                                : "Khong the tao yeu cau hoan tien.");
+            }
+        } else if ("processCheckout".equals(action)) {
             CheckoutService checkoutService = new CheckoutService();
             CheckoutResult result = checkoutService.processCheckout(
                     contractId,
@@ -118,6 +149,10 @@ public class SettlementServlet extends HttpServlet {
             session.setAttribute(ok ? "flashSuccess" : "flashError",
                     ok ? "Da xac nhan hoan coc va hoan tat hop dong."
                        : "Khong the xac nhan hoan coc.");
+            if (ok) {
+                response.sendRedirect(request.getContextPath() + "/staff/dashboard");
+                return;
+            }
         } else if ("complete".equals(action)) {
             SettlementResult settlement = paymentDAO.calculateSettlement(contractId);
             Refund pendingRefund = paymentDAO.getPendingRefundByContractId(contractId);

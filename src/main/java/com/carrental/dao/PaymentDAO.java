@@ -425,7 +425,11 @@ public class PaymentDAO {
                 refund.setRefundMethod(refundMethod);
                 refund.setProofOfRefund(proofOfRefund);
                 insertRefundPaymentLine(conn, refund, providerRefundRef);
-                updateSourcePaymentAfterRefund(conn, refund);
+                if (ContractStatus.CANCELLED.equals(getContractStatus(conn, refund.getContractId()))) {
+                    updateCancelledContractPaymentsAfterRefund(conn, refund.getContractId());
+                } else {
+                    updateSourcePaymentAfterRefund(conn, refund);
+                }
                 tryCompleteSettledContract(conn, refund.getContractId());
 
                 conn.commit();
@@ -1010,6 +1014,56 @@ public class PaymentDAO {
         return false;
     }
 
+    public BigDecimal calculateCancellationRefundAmount(long contractId) {
+        try (Connection conn = DBContext.getConnection()) {
+            return calculateCancellationRefundAmount(conn, contractId);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return BigDecimal.ZERO;
+    }
+
+    public boolean cancelContractWithRefund(long contractId, int changedByUserId, String reason) {
+        try (Connection conn = DBContext.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                String oldStatus = getContractStatusForUpdate(conn, contractId);
+                if (!ContractStatus.PENDING_PAYMENT.equals(oldStatus)
+                        && !ContractStatus.RESERVED.equals(oldStatus)
+                        && !ContractStatus.CONFIRMED.equals(oldStatus)) {
+                    conn.rollback();
+                    return false;
+                }
+
+                Refund pendingRefund = findPendingRefund(conn, contractId);
+                if (!ContractStatus.PENDING_PAYMENT.equals(oldStatus) && pendingRefund == null) {
+                    BigDecimal refundAmount = calculateCancellationRefundAmount(conn, contractId);
+                    Long sourcePaymentId = findLatestRefundablePaymentId(conn, contractId);
+                    if (refundAmount.compareTo(BigDecimal.ZERO) > 0 && sourcePaymentId != null) {
+                        SettlementResult cancellation = new SettlementResult();
+                        cancellation.setContractId(contractId);
+                        cancellation.setSourcePaymentId(sourcePaymentId);
+                        cancellation.setDepositPaid(refundAmount);
+                        cancellation.setDeductionAmount(BigDecimal.ZERO);
+                        cancellation.setRefundAmount(refundAmount);
+                        insertRefund(conn, cancellation, changedByUserId, reason, RefundMethod.MANUAL_BANK_TRANSFER);
+                        markCancellationPaymentsRefundPending(conn, contractId);
+                    }
+                }
+
+                cancelContract(conn, contractId, oldStatus, changedByUserId, reason);
+                conn.commit();
+                return true;
+            } catch (SQLException e) {
+                conn.rollback();
+                e.printStackTrace();
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
     private Refund findPendingRefund(Connection conn, long contractId) throws SQLException {
         String sql = "SELECT TOP 1 * FROM dbo.Refunds "
                 + "WHERE ContractID = ? AND Status = N'REFUND_PENDING' "
@@ -1023,6 +1077,107 @@ public class PaymentDAO {
             }
         }
         return null;
+    }
+
+    private BigDecimal calculateCancellationRefundAmount(Connection conn, long contractId) throws SQLException {
+        BigDecimal refundablePaid = sumPayments(conn, contractId,
+                "PaymentType IN (N'DEPOSIT', N'RENTAL_PREPAID', N'DRIVER_FEE_PREPAID') "
+                        + "AND PaymentStatus IN (N'PAID', N'REFUND_PENDING', N'PARTIALLY_REFUNDED')");
+        BigDecimal alreadyRefunding = sumRefundAmount(conn, contractId,
+                "Status IN (N'REFUND_PENDING', N'REFUNDED')");
+        return maxZero(refundablePaid.subtract(alreadyRefunding));
+    }
+
+    private BigDecimal sumRefundAmount(Connection conn, long contractId, String filter) throws SQLException {
+        String sql = "SELECT COALESCE(SUM(RefundAmount), 0) FROM dbo.Refunds WHERE ContractID = ? AND " + filter;
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setLong(1, contractId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? safe(rs.getBigDecimal(1)) : BigDecimal.ZERO;
+            }
+        }
+    }
+
+    private Long findLatestRefundablePaymentId(Connection conn, long contractId) throws SQLException {
+        String sql = "SELECT TOP 1 PaymentID FROM dbo.Payments "
+                + "WHERE ContractID = ? "
+                + "AND PaymentType IN (N'DEPOSIT', N'RENTAL_PREPAID', N'DRIVER_FEE_PREPAID') "
+                + "AND PaymentStatus IN (N'PAID', N'REFUND_PENDING', N'PARTIALLY_REFUNDED') "
+                + "ORDER BY CASE WHEN PaymentType = N'DEPOSIT' THEN 0 ELSE 1 END, PaidAt DESC, PaymentID DESC";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setLong(1, contractId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getLong("PaymentID") : null;
+            }
+        }
+    }
+
+    private void markCancellationPaymentsRefundPending(Connection conn, long contractId) throws SQLException {
+        String sql = "UPDATE dbo.Payments SET PaymentStatus = N'REFUND_PENDING' "
+                + "WHERE ContractID = ? "
+                + "AND PaymentType IN (N'DEPOSIT', N'RENTAL_PREPAID', N'DRIVER_FEE_PREPAID') "
+                + "AND PaymentStatus = N'PAID'";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setLong(1, contractId);
+            ps.executeUpdate();
+        }
+    }
+
+    private void updateCancelledContractPaymentsAfterRefund(Connection conn, long contractId) throws SQLException {
+        String sql = "UPDATE dbo.Payments SET PaymentStatus = N'REFUNDED' "
+                + "WHERE ContractID = ? "
+                + "AND PaymentType IN (N'DEPOSIT', N'RENTAL_PREPAID', N'DRIVER_FEE_PREPAID') "
+                + "AND PaymentStatus IN (N'PAID', N'REFUND_PENDING', N'PARTIALLY_REFUNDED')";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setLong(1, contractId);
+            ps.executeUpdate();
+        }
+    }
+
+    private String getContractStatusForUpdate(Connection conn, long contractId) throws SQLException {
+        String sql = "SELECT Status FROM dbo.Contracts WITH (UPDLOCK, ROWLOCK) WHERE ContractID = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setLong(1, contractId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getString("Status") : null;
+            }
+        }
+    }
+
+    private void cancelContract(
+            Connection conn,
+            long contractId,
+            String oldStatus,
+            int changedByUserId,
+            String note) throws SQLException {
+        try (PreparedStatement ps = conn.prepareStatement(
+                "UPDATE dbo.Contracts SET Status = N'CANCELLED', ReviewedByUserID = ?, "
+                        + "ReviewedAt = SYSUTCDATETIME(), UpdatedAt = SYSUTCDATETIME() "
+                        + "WHERE ContractID = ? AND Status = ?")) {
+            ps.setInt(1, changedByUserId);
+            ps.setLong(2, contractId);
+            ps.setString(3, oldStatus);
+            ps.executeUpdate();
+        }
+        try (PreparedStatement ps = conn.prepareStatement(
+                "UPDATE dbo.Contract_Details SET DetailStatus = N'CANCELLED' "
+                        + "WHERE ContractID = ? AND DetailStatus <> N'CANCELLED'")) {
+            ps.setLong(1, contractId);
+            ps.executeUpdate();
+        }
+        try (PreparedStatement ps = conn.prepareStatement(
+                "UPDATE dbo.Payment_Transactions SET Status = N'EXPIRED', UpdatedAt = SYSUTCDATETIME() "
+                        + "WHERE ContractID = ? AND Status = N'PENDING'")) {
+            ps.setLong(1, contractId);
+            ps.executeUpdate();
+        }
+        try (PreparedStatement ps = conn.prepareStatement(
+                "UPDATE dbo.Payments SET PaymentStatus = N'EXPIRED' "
+                        + "WHERE ContractID = ? AND PaymentStatus = N'PENDING'")) {
+            ps.setLong(1, contractId);
+            ps.executeUpdate();
+        }
+        insertStatusHistory(conn, contractId, oldStatus, ContractStatus.CANCELLED, note);
     }
 
     private Refund mapRefund(ResultSet rs) throws SQLException {

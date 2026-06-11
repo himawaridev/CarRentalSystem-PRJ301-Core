@@ -267,6 +267,15 @@
 <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    if (window.bootstrap && bootstrap.Tooltip) {
+        document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function(el) {
+            new bootstrap.Tooltip(el, {
+                trigger: 'hover focus',
+                container: 'body'
+            });
+        });
+    }
+
     window.__carRentalSwipers = window.__carRentalSwipers || [];
 
     document.querySelectorAll('[data-slider="car-images"], [data-slider="brand-images"]').forEach(function(slider) {
