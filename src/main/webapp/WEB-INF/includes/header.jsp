@@ -11,7 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" rel="stylesheet">
-    <link href="${ctx}/css/style.css?v=3" rel="stylesheet">
+    <link href="${ctx}/css/style.css?v=7" rel="stylesheet">
 </head>
 <body>
 <nav class="navbar navbar-expand-lg navbar-light bg-dark-custom sticky-top">
@@ -68,6 +68,7 @@
                             <ul class="dropdown-menu dropdown-menu-end">
                                 <li><span class="dropdown-item-text text-muted small">${sessionScope.userRoles}</span></li>
                                 <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="${ctx}/profile"><i class="bi bi-person-vcard me-1"></i>Ho so ca nhan</a></li>
                                 <li><a class="dropdown-item" href="${ctx}/logout"><i class="bi bi-box-arrow-right me-1"></i>Dang xuat</a></li>
                             </ul>
                         </li>

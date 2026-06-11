@@ -7,6 +7,9 @@ GO
 USE CarRentalDB;
 GO
 
+SET QUOTED_IDENTIFIER ON;
+GO
+
 CREATE TABLE dbo.Roles (
     RoleID INT IDENTITY(1,1) PRIMARY KEY,
     RoleName NVARCHAR(30) NOT NULL UNIQUE,
@@ -26,6 +29,10 @@ CREATE TABLE dbo.Users (
     Phone NVARCHAR(30) NULL,
     Address NVARCHAR(255) NULL,
     IdentityNumber NVARCHAR(30) NULL,
+    BankCode NVARCHAR(30) NULL,
+    BankName NVARCHAR(120) NULL,
+    BankAccountNumber NVARCHAR(30) NULL,
+    BankAccountHolder NVARCHAR(120) NULL,
     DateOfBirth DATE NULL,
     Status NVARCHAR(20) NOT NULL DEFAULT N'ACTIVE',
     CreatedAt DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
@@ -38,6 +45,10 @@ CREATE TABLE dbo.Users (
 CREATE UNIQUE INDEX UX_Users_Phone_NotNull
 ON dbo.Users(Phone)
 WHERE Phone IS NOT NULL;
+
+CREATE INDEX IX_Users_BankAccountNumber_NotNull
+ON dbo.Users(BankAccountNumber)
+WHERE BankAccountNumber IS NOT NULL;
 
 CREATE TABLE dbo.User_Roles (
     UserID INT NOT NULL,

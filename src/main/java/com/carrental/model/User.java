@@ -15,6 +15,10 @@ public class User {
     private String address;
     private String identityNumber;
     private String status;
+    private String bankCode;
+    private String bankName;
+    private String bankAccountNumber;
+    private String bankAccountHolder;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -55,6 +59,37 @@ public class User {
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
 
+    public String getBankCode() { return bankCode; }
+    public void setBankCode(String bankCode) { this.bankCode = normalize(bankCode); }
+
+    public String getBankName() { return bankName; }
+    public void setBankName(String bankName) { this.bankName = normalize(bankName); }
+
+    public String getBankAccountNumber() { return bankAccountNumber; }
+    public void setBankAccountNumber(String bankAccountNumber) { this.bankAccountNumber = normalize(bankAccountNumber); }
+
+    public String getBankAccountHolder() { return bankAccountHolder; }
+    public void setBankAccountHolder(String bankAccountHolder) { this.bankAccountHolder = normalize(bankAccountHolder); }
+
+    public boolean hasRefundBankInfo() {
+        return !isBlank(bankCode)
+                && !isBlank(bankName)
+                && !isBlank(bankAccountNumber)
+                && !isBlank(bankAccountHolder);
+    }
+
+    public boolean getRefundBankInfo() {
+        return hasRefundBankInfo();
+    }
+
+    public boolean isBankInfoLocked() {
+        return !isBlank(bankAccountNumber);
+    }
+
+    public boolean getBankInfoLocked() {
+        return isBankInfoLocked();
+    }
+
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 
@@ -64,5 +99,13 @@ public class User {
     @Override
     public String toString() {
         return "User{userId=" + userId + ", username='" + username + "', fullName='" + fullName + "'}";
+    }
+
+    private String normalize(String value) {
+        return value == null ? null : value.trim();
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 }

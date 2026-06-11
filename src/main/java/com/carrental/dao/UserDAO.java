@@ -12,11 +12,17 @@ import java.util.List;
  */
 public class UserDAO {
 
+    private static final String USER_COLUMNS = "UserID, Username, Email, PasswordHash, FullName, Phone, "
+            + "Address, IdentityNumber, Status, BankCode, BankName, BankAccountNumber, BankAccountHolder, CreatedAt";
+    private static final String USER_COLUMNS_QUALIFIED = "u.UserID, u.Username, u.Email, u.PasswordHash, "
+            + "u.FullName, u.Phone, u.Address, u.IdentityNumber, u.Status, u.BankCode, u.BankName, "
+            + "u.BankAccountNumber, u.BankAccountHolder, u.CreatedAt";
+
     /**
      * Authenticate user by username and password hash.
      */
     public User login(String username, String passwordHash) {
-        String sql = "SELECT UserID, Username, Email, PasswordHash, FullName, Phone, Address, IdentityNumber, Status "
+        String sql = "SELECT " + USER_COLUMNS + " "
                 + "FROM dbo.Users WHERE Username = ? AND PasswordHash = ? AND Status = N'ACTIVE'";
         try (Connection conn = DBContext.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -146,7 +152,7 @@ public class UserDAO {
      */
     public List<User> getAllUsers() {
         List<User> users = new ArrayList<>();
-        String sql = "SELECT UserID, Username, Email, PasswordHash, FullName, Phone, Address, IdentityNumber, Status, CreatedAt "
+        String sql = "SELECT " + USER_COLUMNS + " "
                 + "FROM dbo.Users ORDER BY CreatedAt DESC";
         try (Connection conn = DBContext.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql);
@@ -164,7 +170,7 @@ public class UserDAO {
      * Get user by ID.
      */
     public User getUserById(int userId) {
-        String sql = "SELECT UserID, Username, Email, PasswordHash, FullName, Phone, Address, IdentityNumber, Status, CreatedAt "
+        String sql = "SELECT " + USER_COLUMNS + " "
                 + "FROM dbo.Users WHERE UserID = ?";
         try (Connection conn = DBContext.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -178,6 +184,88 @@ public class UserDAO {
             e.printStackTrace();
         }
         return null;
+    }
+
+    public User getUserByCustomerId(int customerId) {
+        String sql = "SELECT " + USER_COLUMNS_QUALIFIED + " "
+                + "FROM dbo.Users u "
+                + "INNER JOIN dbo.Customers c ON c.UserID = u.UserID "
+                + "WHERE c.CustomerID = ?";
+        try (Connection conn = DBContext.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, customerId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return mapUser(rs);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public boolean updateCustomerProfile(
+            int userId,
+            String fullName,
+            String phone,
+            String address,
+            String bankCode,
+            String bankName,
+            String bankAccountNumber,
+            String bankAccountHolder) {
+
+        try (Connection conn = DBContext.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                User current = null;
+                try (PreparedStatement ps = conn.prepareStatement(
+                        "SELECT " + USER_COLUMNS + " FROM dbo.Users WITH (UPDLOCK, ROWLOCK) WHERE UserID = ?")) {
+                    ps.setInt(1, userId);
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (rs.next()) {
+                            current = mapUser(rs);
+                        }
+                    }
+                }
+                if (current == null) {
+                    conn.rollback();
+                    return false;
+                }
+
+                boolean bankLocked = current.isBankInfoLocked();
+                String sql = "UPDATE dbo.Users SET FullName = ?, Phone = ?, Address = ?, "
+                        + (bankLocked
+                                ? "UpdatedAt = SYSUTCDATETIME() "
+                                : "BankCode = ?, BankName = ?, BankAccountNumber = ?, BankAccountHolder = ?, "
+                                        + "UpdatedAt = SYSUTCDATETIME() ")
+                        + "WHERE UserID = ?";
+                try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                    ps.setString(1, normalize(fullName));
+                    ps.setString(2, normalize(phone));
+                    ps.setString(3, normalize(address));
+                    if (bankLocked) {
+                        ps.setInt(4, userId);
+                    } else {
+                        ps.setString(4, normalize(bankCode));
+                        ps.setString(5, normalize(bankName));
+                        ps.setString(6, normalize(bankAccountNumber));
+                        ps.setString(7, normalize(bankAccountHolder));
+                        ps.setInt(8, userId);
+                    }
+                    ps.executeUpdate();
+                }
+
+                conn.commit();
+                return true;
+            } catch (SQLException e) {
+                conn.rollback();
+                e.printStackTrace();
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
     }
 
     /**
@@ -375,10 +463,26 @@ public class UserDAO {
         u.setAddress(rs.getString("Address"));
         u.setIdentityNumber(rs.getString("IdentityNumber"));
         u.setStatus(rs.getString("Status"));
+        u.setBankCode(readNullable(rs, "BankCode"));
+        u.setBankName(readNullable(rs, "BankName"));
+        u.setBankAccountNumber(readNullable(rs, "BankAccountNumber"));
+        u.setBankAccountHolder(readNullable(rs, "BankAccountHolder"));
         try {
             Timestamp ts = rs.getTimestamp("CreatedAt");
             if (ts != null) u.setCreatedAt(ts.toLocalDateTime());
         } catch (SQLException ignored) {}
         return u;
+    }
+
+    private String readNullable(ResultSet rs, String column) {
+        try {
+            return rs.getString(column);
+        } catch (SQLException ignored) {
+            return null;
+        }
+    }
+
+    private String normalize(String value) {
+        return value == null ? null : value.trim().replaceAll("\\s+", " ");
     }
 }

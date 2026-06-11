@@ -32,6 +32,7 @@ import java.util.Set;
 public class BookingServlet extends HttpServlet {
 
     private static final BigDecimal DRIVER_DAILY_RATE = new BigDecimal("300000");
+    private static final String SPECIFIC_SELECTION_MODE = "specific";
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -39,8 +40,13 @@ public class BookingServlet extends HttpServlet {
         String pickupStr = request.getParameter("pickupAt");
         String returnStr = request.getParameter("returnAt");
         String[] carIds = request.getParameterValues("carId");
+        String selectionMode = request.getParameter("selectionMode");
 
-        if (!populateBookingView(request, pickupStr, returnStr, carIds, null)) {
+        if (redirectToProfileIfMissingBank(request, response)) {
+            return;
+        }
+
+        if (!populateBookingView(request, pickupStr, returnStr, carIds, null, selectionMode)) {
             response.sendRedirect(request.getContextPath() + "/search");
             return;
         }
@@ -59,6 +65,12 @@ public class BookingServlet extends HttpServlet {
         }
 
         UserDAO userDAO = new UserDAO();
+        User currentUser = userDAO.getUserById(user.getUserId());
+        if (currentUser == null || !currentUser.hasRefundBankInfo()) {
+            response.sendRedirect(profileRequiredUrl(request));
+            return;
+        }
+
         Integer customerId = userDAO.getCustomerIdByUserId(user.getUserId());
         if (customerId == null) {
             response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
@@ -73,14 +85,16 @@ public class BookingServlet extends HttpServlet {
         String returnLocation = normalizeLocation(request.getParameter("returnLocation"));
         String[] carIds = request.getParameterValues("carId");
         String[] requiresDriverFlags = request.getParameterValues("requiresDriver");
+        String selectionMode = request.getParameter("selectionMode");
         PaymentMode paymentMode = PaymentMode.fromRequest(request.getParameter("paymentMode"));
 
         request.setAttribute("pickupLocation", pickupLocation);
         request.setAttribute("returnLocation", returnLocation);
         request.setAttribute("paymentMode", paymentMode.name());
+        request.setAttribute("selectionMode", selectionMode);
 
         if (isBlank(pickupLocation) || isBlank(returnLocation)) {
-            rejectBadBooking(request, response, pickupStr, returnStr, carIds, requiresDriverFlags,
+            rejectBadBooking(request, response, pickupStr, returnStr, carIds, requiresDriverFlags, selectionMode,
                     "Vui long nhap day du dia chi nhan xe va dia chi tra xe.");
             return;
         }
@@ -91,13 +105,13 @@ public class BookingServlet extends HttpServlet {
             pickupAt = LocalDateTime.parse(pickupStr);
             returnAt = LocalDateTime.parse(returnStr);
         } catch (DateTimeParseException | NullPointerException e) {
-            rejectBadBooking(request, response, pickupStr, returnStr, carIds, requiresDriverFlags,
+            rejectBadBooking(request, response, pickupStr, returnStr, carIds, requiresDriverFlags, selectionMode,
                     "Thoi gian nhan/tra xe khong hop le.");
             return;
         }
 
         if (!returnAt.isAfter(pickupAt) || carIds == null || carIds.length == 0) {
-            rejectBadBooking(request, response, pickupStr, returnStr, carIds, requiresDriverFlags,
+            rejectBadBooking(request, response, pickupStr, returnStr, carIds, requiresDriverFlags, selectionMode,
                     "Vui long chon xe va thoi gian tra xe phai sau thoi gian nhan xe.");
             return;
         }
@@ -121,8 +135,10 @@ public class BookingServlet extends HttpServlet {
                 continue;
             }
 
-            Car car = carDAO.findRandomAvailableCarInSameGroup(
-                    representativeCarId, pickupAt, returnAt, assignedCarIds);
+            Car car = useSpecificSelection(selectionMode)
+                    ? carDAO.findAvailableCarById(representativeCarId, pickupAt, returnAt, assignedCarIds)
+                    : carDAO.findRandomAvailableCarInSameGroup(
+                            representativeCarId, pickupAt, returnAt, assignedCarIds);
             if (car == null) {
                 continue;
             }
@@ -147,7 +163,7 @@ public class BookingServlet extends HttpServlet {
         }
 
         if (details.isEmpty()) {
-            rejectBadBooking(request, response, pickupStr, returnStr, carIds, requiresDriverFlags,
+            rejectBadBooking(request, response, pickupStr, returnStr, carIds, requiresDriverFlags, selectionMode,
                     "Khong tim thay xe hop le de dat.");
             return;
         }
@@ -170,7 +186,7 @@ public class BookingServlet extends HttpServlet {
             if (error == null || error.isBlank()) {
                 error = "Dat xe that bai. Xe co the da duoc dat boi nguoi khac.";
             }
-            rejectBadBooking(request, response, pickupStr, returnStr, carIds, requiresDriverFlags,
+            rejectBadBooking(request, response, pickupStr, returnStr, carIds, requiresDriverFlags, selectionMode,
                     error);
             return;
         }
@@ -186,11 +202,12 @@ public class BookingServlet extends HttpServlet {
             String returnStr,
             String[] carIds,
             String[] requiresDriverFlags,
+            String selectionMode,
             String message) throws ServletException, IOException {
 
         response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
         request.setAttribute("error", message);
-        populateBookingView(request, pickupStr, returnStr, carIds, requiresDriverFlags);
+        populateBookingView(request, pickupStr, returnStr, carIds, requiresDriverFlags, selectionMode);
         request.getRequestDispatcher("/WEB-INF/views/booking.jsp").forward(request, response);
     }
 
@@ -199,7 +216,8 @@ public class BookingServlet extends HttpServlet {
             String pickupStr,
             String returnStr,
             String[] carIds,
-            String[] requiresDriverFlags) {
+            String[] requiresDriverFlags,
+            String selectionMode) {
 
         if (pickupStr == null || returnStr == null || carIds == null || carIds.length == 0) {
             return false;
@@ -226,8 +244,11 @@ public class BookingServlet extends HttpServlet {
 
             for (String idStr : carIds) {
                 int representativeCarId = Integer.parseInt(idStr);
-                Car car = carDAO.findRandomAvailableCarInSameGroup(
-                        representativeCarId, pickupAt, returnAt, selectedPhysicalCarIds);
+                Car car = useSpecificSelection(selectionMode)
+                        ? carDAO.findAvailableCarById(
+                                representativeCarId, pickupAt, returnAt, selectedPhysicalCarIds)
+                        : carDAO.findRandomAvailableCarInSameGroup(
+                                representativeCarId, pickupAt, returnAt, selectedPhysicalCarIds);
                 if (car == null) {
                     continue;
                 }
@@ -249,6 +270,7 @@ public class BookingServlet extends HttpServlet {
             request.setAttribute("totalDriverFee", totalDriverFee);
             request.setAttribute("fullPrepaymentTotal", totalDeposit.add(totalRental).add(totalDriverFee));
             request.setAttribute("selectedDriverCarIds", driverCarIds);
+            request.setAttribute("selectionMode", selectionMode);
             return !selectedCars.isEmpty();
         } catch (DateTimeParseException | NumberFormatException e) {
             return false;
@@ -263,6 +285,10 @@ public class BookingServlet extends HttpServlet {
         return value == null || value.isBlank();
     }
 
+    private boolean useSpecificSelection(String selectionMode) {
+        return SPECIFIC_SELECTION_MODE.equalsIgnoreCase(selectionMode);
+    }
+
     private Set<String> toSet(String[] values) {
         Set<String> set = new HashSet<>();
         if (values != null) {
@@ -271,5 +297,35 @@ public class BookingServlet extends HttpServlet {
             }
         }
         return set;
+    }
+
+    private boolean redirectToProfileIfMissingBank(HttpServletRequest request, HttpServletResponse response)
+            throws IOException {
+        HttpSession session = request.getSession(false);
+        User user = session == null ? null : (User) session.getAttribute("loggedInUser");
+        if (user == null) {
+            return false;
+        }
+
+        User currentUser = new UserDAO().getUserById(user.getUserId());
+        if (currentUser != null && currentUser.hasRefundBankInfo()) {
+            return false;
+        }
+
+        if (session != null) {
+            session.setAttribute("flashError",
+                    "Vui long cap nhat tai khoan ngan hang nhan hoan coc truoc khi dat xe.");
+        }
+        response.sendRedirect(profileRequiredUrl(request));
+        return true;
+    }
+
+    private String profileRequiredUrl(HttpServletRequest request) {
+        String current = request.getRequestURI();
+        if (request.getQueryString() != null && !request.getQueryString().isBlank()) {
+            current += "?" + request.getQueryString();
+        }
+        return request.getContextPath() + "/profile?required=bank&redirect="
+                + URLEncoder.encode(current, StandardCharsets.UTF_8);
     }
 }
