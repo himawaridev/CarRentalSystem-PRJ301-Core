@@ -20,7 +20,7 @@
             <thead>
                 <tr>
                     <th>ID</th><th>Username</th><th>Ho ten</th><th>Email</th>
-                    <th>Phone</th><th>Roles</th><th>Trang thai</th><th>Hanh dong</th>
+                    <th>Phone</th><th>Ngan hang</th><th>Roles</th><th>Trang thai</th><th>Hanh dong</th>
                 </tr>
             </thead>
             <tbody>
@@ -31,6 +31,15 @@
                     <td>${u.fullName}</td>
                     <td class="text-muted small">${u.email}</td>
                     <td>${u.phone}</td>
+                    <td class="small">
+                        <c:choose>
+                            <c:when test="${u.refundBankInfo}">
+                                <strong>${u.bankName}</strong><br>
+                                <span class="text-muted">${u.bankAccountNumber}</span>
+                            </c:when>
+                            <c:otherwise><span class="text-muted">Chua co</span></c:otherwise>
+                        </c:choose>
+                    </td>
                     <td>
                         <c:forEach var="r" items="${userRolesMap[u.userId]}">
                             <span class="car-tag">${r}</span>
@@ -53,20 +62,70 @@
                     </td>
                 </tr>
 
-                <!-- Edit Status Modal -->
+                <!-- Edit User Modal -->
                 <div class="modal fade" id="editUserModal-${u.userId}" tabindex="-1">
-                    <div class="modal-dialog">
+                    <div class="modal-dialog modal-lg">
                         <div class="modal-content">
                             <form method="post" action="${pageContext.request.contextPath}/admin/dashboard">
-                                <input type="hidden" name="action" value="updateStatus">
+                                <input type="hidden" name="action" value="updateUserDetails">
                                 <input type="hidden" name="userId" value="${u.userId}">
-                                <div class="modal-header"><h5 class="modal-title">Trang thai: ${u.username}</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+                                <div class="modal-header"><h5 class="modal-title">Sua tai khoan: ${u.username}</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
                                 <div class="modal-body">
-                                    <select name="status" class="form-select">
-                                        <option value="ACTIVE" ${u.status == 'ACTIVE' ? 'selected' : ''}>ACTIVE</option>
-                                        <option value="LOCKED" ${u.status == 'LOCKED' ? 'selected' : ''}>LOCKED</option>
-                                        <option value="DISABLED" ${u.status == 'DISABLED' ? 'selected' : ''}>DISABLED</option>
-                                    </select>
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label">Username</label>
+                                            <input type="text" class="form-control" value="${u.username}" readonly>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Trang thai</label>
+                                            <select name="status" class="form-select">
+                                                <option value="ACTIVE" ${u.status == 'ACTIVE' ? 'selected' : ''}>ACTIVE</option>
+                                                <option value="LOCKED" ${u.status == 'LOCKED' ? 'selected' : ''}>LOCKED</option>
+                                                <option value="DISABLED" ${u.status == 'DISABLED' ? 'selected' : ''}>DISABLED</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Ho ten</label>
+                                            <input type="text" name="fullName" class="form-control" value="${u.fullName}" required>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Email</label>
+                                            <input type="email" name="email" class="form-control" value="${u.email}" required>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Phone</label>
+                                            <input type="text" name="phone" class="form-control" value="${u.phone}">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">CMND/CCCD</label>
+                                            <input type="text" name="identityNumber" class="form-control" value="${u.identityNumber}">
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label">Dia chi</label>
+                                            <input type="text" name="address" class="form-control" value="${u.address}">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label">Ngan hang nhan hoan tien</label>
+                                            <select name="bankCode" class="form-select">
+                                                <option value="">Chua cau hinh</option>
+                                                <c:forEach var="bank" items="${bankOptions}">
+                                                    <option value="${bank.key}" ${u.bankCode == bank.key ? 'selected' : ''}>
+                                                        ${bank.value}
+                                                    </option>
+                                                </c:forEach>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label">So tai khoan</label>
+                                            <input type="text" name="bankAccountNumber" class="form-control"
+                                                   value="${u.bankAccountNumber}" maxlength="20">
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label">Chu tai khoan</label>
+                                            <input type="text" name="bankAccountHolder" class="form-control"
+                                                   value="${u.bankAccountHolder}">
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="modal-footer">
                                     <button type="button" class="btn btn-outline-accent" data-bs-dismiss="modal">Huy</button>

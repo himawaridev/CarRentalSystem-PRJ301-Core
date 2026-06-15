@@ -268,6 +268,31 @@ public class UserDAO {
         return false;
     }
 
+    public boolean updateUserByAdmin(User user) {
+        String sql = "UPDATE dbo.Users SET Email = ?, FullName = ?, Phone = ?, Address = ?, "
+                + "IdentityNumber = ?, Status = ?, BankCode = ?, BankName = ?, "
+                + "BankAccountNumber = ?, BankAccountHolder = ?, UpdatedAt = SYSUTCDATETIME() "
+                + "WHERE UserID = ?";
+        try (Connection conn = DBContext.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, normalize(user.getEmail()));
+            ps.setString(2, normalize(user.getFullName()));
+            ps.setString(3, normalize(user.getPhone()));
+            ps.setString(4, normalize(user.getAddress()));
+            ps.setString(5, normalize(user.getIdentityNumber()));
+            ps.setString(6, normalize(user.getStatus()));
+            ps.setString(7, normalize(user.getBankCode()));
+            ps.setString(8, normalize(user.getBankName()));
+            ps.setString(9, normalize(user.getBankAccountNumber()));
+            ps.setString(10, normalize(user.getBankAccountHolder()));
+            ps.setInt(11, user.getUserId());
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
     /**
      * Create a new user with specified roles (for admin).
      */
