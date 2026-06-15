@@ -81,21 +81,30 @@ public class BookingServlet extends HttpServlet {
 
         String pickupStr = request.getParameter("pickupAt");
         String returnStr = request.getParameter("returnAt");
-        String pickupLocation = normalizeLocation(request.getParameter("pickupLocation"));
+        String pickupLocation = buildPickupLocation(request);
         String returnLocation = normalizeLocation(request.getParameter("returnLocation"));
+        String pickupSpecificAddress = normalizeLocation(request.getParameter("pickupSpecificAddress"));
+        String pickupProvince = normalizeLocation(request.getParameter("pickupProvince"));
+        String pickupDistrict = normalizeLocation(request.getParameter("pickupDistrict"));
+        String pickupWard = normalizeLocation(request.getParameter("pickupWard"));
         String[] carIds = request.getParameterValues("carId");
         String[] requiresDriverFlags = request.getParameterValues("requiresDriver");
         String selectionMode = request.getParameter("selectionMode");
         PaymentMode paymentMode = PaymentMode.fromRequest(request.getParameter("paymentMode"));
 
         request.setAttribute("pickupLocation", pickupLocation);
+        request.setAttribute("pickupSpecificAddress", pickupSpecificAddress);
+        request.setAttribute("pickupProvince", pickupProvince);
+        request.setAttribute("pickupDistrict", pickupDistrict);
+        request.setAttribute("pickupWard", pickupWard);
         request.setAttribute("returnLocation", returnLocation);
         request.setAttribute("paymentMode", paymentMode.name());
         request.setAttribute("selectionMode", selectionMode);
 
-        if (isBlank(pickupLocation) || isBlank(returnLocation)) {
+        if (isBlank(pickupSpecificAddress) || isBlank(pickupProvince)
+                || isBlank(pickupDistrict) || isBlank(pickupWard) || isBlank(returnLocation)) {
             rejectBadBooking(request, response, pickupStr, returnStr, carIds, requiresDriverFlags, selectionMode,
-                    "Vui long nhap day du dia chi nhan xe va dia chi tra xe.");
+                    "Vui long nhap day du dia chi cu the, tinh/thanh pho, quan/huyen, phuong/xa va dia chi tra xe.");
             return;
         }
 
@@ -268,13 +277,33 @@ public class BookingServlet extends HttpServlet {
             request.setAttribute("totalDeposit", totalDeposit);
             request.setAttribute("totalRental", totalRental);
             request.setAttribute("totalDriverFee", totalDriverFee);
+            request.setAttribute("driverFeePerCar", DRIVER_DAILY_RATE.multiply(days));
             request.setAttribute("fullPrepaymentTotal", totalDeposit.add(totalRental).add(totalDriverFee));
             request.setAttribute("selectedDriverCarIds", driverCarIds);
+            request.setAttribute("selectedDriverCarIdNumbers", toIntegerSet(requiresDriverFlags));
             request.setAttribute("selectionMode", selectionMode);
             return !selectedCars.isEmpty();
         } catch (DateTimeParseException | NumberFormatException e) {
             return false;
         }
+    }
+
+    private String buildPickupLocation(HttpServletRequest request) {
+        String specificAddress = normalizeLocation(request.getParameter("pickupSpecificAddress"));
+        String ward = normalizeLocation(request.getParameter("pickupWard"));
+        String district = normalizeLocation(request.getParameter("pickupDistrict"));
+        String province = normalizeLocation(request.getParameter("pickupProvince"));
+
+        List<String> parts = new ArrayList<>();
+        if (!isBlank(specificAddress)) parts.add(specificAddress);
+        if (!isBlank(ward)) parts.add(ward);
+        if (!isBlank(district)) parts.add(district);
+        if (!isBlank(province)) parts.add(province);
+
+        if (!parts.isEmpty()) {
+            return String.join(", ", parts);
+        }
+        return normalizeLocation(request.getParameter("pickupLocation"));
     }
 
     private String normalizeLocation(String value) {
@@ -294,6 +323,19 @@ public class BookingServlet extends HttpServlet {
         if (values != null) {
             for (String value : values) {
                 set.add(value);
+            }
+        }
+        return set;
+    }
+
+    private Set<Integer> toIntegerSet(String[] values) {
+        Set<Integer> set = new HashSet<>();
+        if (values != null) {
+            for (String value : values) {
+                try {
+                    set.add(Integer.parseInt(value));
+                } catch (NumberFormatException ignored) {
+                }
             }
         }
         return set;
