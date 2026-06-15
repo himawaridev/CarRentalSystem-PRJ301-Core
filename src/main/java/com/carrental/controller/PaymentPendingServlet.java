@@ -13,6 +13,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
+import java.util.List;
 
 @WebServlet("/payment/pending")
 public class PaymentPendingServlet extends HttpServlet {
@@ -43,16 +44,37 @@ public class PaymentPendingServlet extends HttpServlet {
 
         ContractDAO contractDAO = new ContractDAO();
         Contract contract = contractDAO.getContractById(paymentTransaction.getContractId());
-        UserDAO userDAO = new UserDAO();
-        Integer customerId = userDAO.getCustomerIdByUserId(user.getUserId());
-
-        if (contract == null || customerId == null || contract.getCustomerId() != customerId) {
+        if (contract == null || !canViewPayment(user, session, contract)) {
             response.sendError(HttpServletResponse.SC_FORBIDDEN, "Access denied");
             return;
         }
 
         request.setAttribute("contract", contract);
         request.setAttribute("paymentTransaction", paymentTransaction);
+        request.setAttribute("paymentReturnUrl", paymentReturnUrl(request, session, contract));
         request.getRequestDispatcher("/WEB-INF/views/payment-pending.jsp").forward(request, response);
+    }
+
+    private boolean canViewPayment(User user, HttpSession session, Contract contract) {
+        if (hasStaffRole(session)) {
+            return true;
+        }
+
+        UserDAO userDAO = new UserDAO();
+        Integer customerId = userDAO.getCustomerIdByUserId(user.getUserId());
+        return customerId != null && customerId == contract.getCustomerId();
+    }
+
+    private String paymentReturnUrl(HttpServletRequest request, HttpSession session, Contract contract) {
+        if (hasStaffRole(session)) {
+            return request.getContextPath() + "/staff/settlement?contractId=" + contract.getContractId();
+        }
+        return request.getContextPath() + "/my-contracts";
+    }
+
+    private boolean hasStaffRole(HttpSession session) {
+        @SuppressWarnings("unchecked")
+        List<String> roles = (List<String>) session.getAttribute("userRoles");
+        return roles != null && (roles.contains("STAFF") || roles.contains("MANAGER") || roles.contains("ADMIN"));
     }
 }

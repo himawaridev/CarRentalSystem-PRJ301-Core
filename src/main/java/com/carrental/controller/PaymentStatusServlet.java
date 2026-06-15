@@ -15,6 +15,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.List;
 import org.json.JSONObject;
 
 @WebServlet("/payment/status")
@@ -51,9 +52,7 @@ public class PaymentStatusServlet extends HttpServlet {
 
         ContractDAO contractDAO = new ContractDAO();
         Contract contract = contractDAO.getContractById(tx.getContractId());
-        UserDAO userDAO = new UserDAO();
-        Integer customerId = userDAO.getCustomerIdByUserId(user.getUserId());
-        if (contract == null || customerId == null || contract.getCustomerId() != customerId) {
+        if (contract == null || !canViewPayment(user, session, contract)) {
             writeJson(response, HttpServletResponse.SC_FORBIDDEN,
                     new JSONObject().put("ok", false).put("message", "Access denied."));
             return;
@@ -80,12 +79,35 @@ public class PaymentStatusServlet extends HttpServlet {
         json.put("contractStatus", contract.getStatus());
         json.put("paid", paid);
         json.put("expired", expired);
-        json.put("redirectUrl", request.getContextPath() + "/my-contracts");
+        json.put("redirectUrl", paymentReturnUrl(request, session, contract));
         if (tx.getPaidAt() != null) {
             json.put("paidAt", tx.getPaidAt().toString());
         }
 
         writeJson(response, HttpServletResponse.SC_OK, json);
+    }
+
+    private boolean canViewPayment(User user, HttpSession session, Contract contract) {
+        if (hasStaffRole(session)) {
+            return true;
+        }
+
+        UserDAO userDAO = new UserDAO();
+        Integer customerId = userDAO.getCustomerIdByUserId(user.getUserId());
+        return customerId != null && customerId == contract.getCustomerId();
+    }
+
+    private String paymentReturnUrl(HttpServletRequest request, HttpSession session, Contract contract) {
+        if (hasStaffRole(session)) {
+            return request.getContextPath() + "/staff/settlement?contractId=" + contract.getContractId();
+        }
+        return request.getContextPath() + "/my-contracts";
+    }
+
+    private boolean hasStaffRole(HttpSession session) {
+        @SuppressWarnings("unchecked")
+        List<String> roles = (List<String>) session.getAttribute("userRoles");
+        return roles != null && (roles.contains("STAFF") || roles.contains("MANAGER") || roles.contains("ADMIN"));
     }
 
     private void writeJson(HttpServletResponse response, int status, JSONObject json) throws IOException {

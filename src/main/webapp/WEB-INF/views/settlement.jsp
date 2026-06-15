@@ -128,6 +128,59 @@
             </div>
         </div>
 
+        <div class="settlement-panel mt-4">
+            <div class="settlement-panel-title">
+                <i class="bi bi-credit-card-2-front"></i> Phuong thuc thanh toan da ghi nhan
+            </div>
+            <c:choose>
+                <c:when test="${not empty paymentRecords}">
+                    <div class="table-responsive">
+                        <table class="table table-custom mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Khoan tien</th>
+                                    <th>So tien</th>
+                                    <th>Phuong thuc</th>
+                                    <th>Trang thai</th>
+                                    <th>Ma GD</th>
+                                    <th>Thoi gian</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <c:forEach var="p" items="${paymentRecords}">
+                                    <tr>
+                                        <td>${p.displayType}</td>
+                                        <td><fmt:formatNumber value="${p.amount}" pattern="#,###"/> VND</td>
+                                        <td>${p.displayMethod}</td>
+                                        <td>
+                                            <span class="badge-status ${p.paymentStatus == 'PAID' || p.paymentStatus == 'REFUNDED' ? 'badge-completed' : p.paymentStatus == 'PENDING' || p.paymentStatus == 'REFUND_PENDING' ? 'badge-pending' : 'badge-cancelled'}">
+                                                ${p.paymentStatus}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <c:choose>
+                                                <c:when test="${not empty p.transactionRef}">${p.transactionRef}</c:when>
+                                                <c:otherwise>${p.providerTransactionRef}</c:otherwise>
+                                            </c:choose>
+                                        </td>
+                                        <td>
+                                            <c:choose>
+                                                <c:when test="${p.paidAt != null}">${p.paidAt}</c:when>
+                                                <c:otherwise>${p.createdAt}</c:otherwise>
+                                            </c:choose>
+                                        </td>
+                                    </tr>
+                                </c:forEach>
+                            </tbody>
+                        </table>
+                    </div>
+                </c:when>
+                <c:otherwise>
+                    <div class="alert alert-warning small mb-0">Chua co dong thanh toan nao duoc ghi nhan.</div>
+                </c:otherwise>
+            </c:choose>
+        </div>
+
         <div class="divider"></div>
         <fmt:formatNumber var="amountToCollectText" value="${settlement.amountToCollect}" pattern="#,###"/>
 
@@ -161,6 +214,17 @@
                             <span>So tien can chuyen</span>
                             <strong><fmt:formatNumber value="${pendingRefund.refundAmount}" pattern="#,###"/> VND</strong>
                         </div>
+
+                        <c:if test="${not empty pendingRefund.proofOfRefund}">
+                            <div class="alert alert-warning small mt-3 mb-0">
+                                ${pendingRefund.proofOfRefund}
+                            </div>
+                        </c:if>
+                        <div class="alert alert-info small mt-3 mb-0">
+                            Hoan coc dang xu ly thu cong: nhan vien quet QR ben trai, chuyen khoan cho khach,
+                            sau do nhap ma giao dich ngan hang de hoan tat.
+                        </div>
+
                         <form method="post" action="${pageContext.request.contextPath}/staff/settlement" class="mt-3">
                             <input type="hidden" name="contractId" value="${contract.contractId}">
                             <input type="hidden" name="refundId" value="${pendingRefund.refundId}">
@@ -177,17 +241,76 @@
                 </div>
             </c:when>
             <c:when test="${settlement.amountToCollect > 0}">
-                <form method="post" action="${pageContext.request.contextPath}/staff/settlement"
-                      class="settlement-action-panel">
-                    <input type="hidden" name="contractId" value="${contract.contractId}">
-                    <div>
-                        <div class="text-muted small">So tien can thu them</div>
-                        <strong><fmt:formatNumber value="${settlement.amountToCollect}" pattern="#,###"/> VND</strong>
+                <div class="settlement-refund-workspace">
+                    <div class="settlement-qr-panel">
+                        <div class="settlement-panel-title">
+                            <i class="bi bi-qr-code"></i> QR thu tien con lai
+                        </div>
+                        <c:choose>
+                            <c:when test="${balancePaymentTransaction != null}">
+                                <img src="${pageContext.request.contextPath}/payment/qr?ref=${balancePaymentTransaction.providerTransactionRef}"
+                                     alt="QR thu tien con lai ${contract.contractCode}" class="refund-qr-img">
+                                <div class="refund-qr-note">
+                                    Ma GD: <strong>${balancePaymentTransaction.providerTransactionRef}</strong>
+                                </div>
+                            </c:when>
+                            <c:otherwise>
+                                <div class="alert alert-warning small mb-0">
+                                    Chua co QR thu tien con lai. Hay tao QR va gui cho khach quet thanh toan.
+                                </div>
+                            </c:otherwise>
+                        </c:choose>
                     </div>
-                    <button type="submit" name="action" value="collectBalance" class="btn btn-accent btn-action-nowrap">
-                        <i class="bi bi-cash-coin me-1"></i>Ghi nhan da thu
-                    </button>
-                </form>
+                    <div class="settlement-confirm-panel">
+                        <div class="settlement-panel-title">
+                            <i class="bi bi-cash-coin"></i> Thu tien thue/tai xe con lai
+                        </div>
+                        <div class="settlement-refund-amount">
+                            <span>So tien can thu</span>
+                            <strong><fmt:formatNumber value="${settlement.amountToCollect}" pattern="#,###"/> VND</strong>
+                        </div>
+                        <div class="alert alert-info small mt-3 mb-0">
+                            Khach can thanh toan het tien thue/tai xe con lai bang QR truoc, sau do moi tao QR hoan coc.
+                        </div>
+
+                        <c:choose>
+                            <c:when test="${balancePaymentTransaction != null}">
+                                <div class="payment-line mt-3">
+                                    <span>Trang thai QR</span>
+                                    <strong>${balancePaymentTransaction.status}</strong>
+                                </div>
+                                <div class="payment-line">
+                                    <span>Het han luc</span>
+                                    <strong>${balancePaymentTransaction.expiredAt}</strong>
+                                </div>
+                                <div class="d-flex flex-wrap gap-2 mt-3">
+                                    <a href="${pageContext.request.contextPath}/payment/pending?ref=${balancePaymentTransaction.providerTransactionRef}"
+                                       target="_blank" rel="noopener noreferrer"
+                                       class="btn btn-outline-accent btn-action-nowrap">
+                                        <i class="bi bi-box-arrow-up-right me-1"></i>Mo trang thanh toan
+                                    </a>
+                                    <form method="post" action="${pageContext.request.contextPath}/staff/settlement">
+                                        <input type="hidden" name="contractId" value="${contract.contractId}">
+                                        <input type="hidden" name="balancePaymentRef" value="${balancePaymentTransaction.providerTransactionRef}">
+                                        <button type="submit" name="action" value="checkBalancePayment"
+                                                class="btn btn-accent btn-action-nowrap">
+                                            <i class="bi bi-arrow-repeat me-1"></i>Kiem tra PayOS
+                                        </button>
+                                    </form>
+                                </div>
+                            </c:when>
+                            <c:otherwise>
+                                <form method="post" action="${pageContext.request.contextPath}/staff/settlement" class="mt-3">
+                                    <input type="hidden" name="contractId" value="${contract.contractId}">
+                                    <button type="submit" name="action" value="createBalancePayment"
+                                            class="btn btn-accent btn-action-nowrap w-100">
+                                        <i class="bi bi-qr-code me-1"></i>Tao QR thu tien con lai
+                                    </button>
+                                </form>
+                            </c:otherwise>
+                        </c:choose>
+                    </div>
+                </div>
             </c:when>
             <c:when test="${settlement.refundAmount > 0}">
                 <form method="post" action="${pageContext.request.contextPath}/staff/settlement"
@@ -199,9 +322,15 @@
                         <input type="text" class="form-control" name="reason"
                                value="Quyet toan sau khi tra xe" maxlength="500">
                     </div>
-                    <button type="submit" name="action" value="createRefund" class="btn btn-accent btn-action-nowrap">
-                        <i class="bi bi-qr-code me-1"></i>Tao QR hoan tien
-                    </button>
+                    <div class="d-flex flex-wrap gap-2 justify-content-end">
+                        <button type="submit" name="action" value="createRefund" class="btn btn-accent btn-action-nowrap">
+                            <i class="bi bi-qr-code me-1"></i>Tao QR hoan coc thu cong
+                        </button>
+                    </div>
+                    <div class="alert alert-info small mt-3 mb-0">
+                        He thong se tao QR chuyen tien toi tai khoan ngan hang cua khach. Sau khi nhan vien chuyen khoan,
+                        nhap ma giao dich de xac nhan hoan coc.
+                    </div>
                 </form>
             </c:when>
             <c:otherwise>

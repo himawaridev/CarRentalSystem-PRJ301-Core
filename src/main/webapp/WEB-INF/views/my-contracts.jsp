@@ -69,7 +69,7 @@
                                        aria-label="Chi tiet hop dong">
                                         <i class="bi bi-eye"></i>
                                     </a>
-                                    <c:if test="${c.status == 'PENDING_PAYMENT' && not empty pendingPaymentRefs[c.contractId]}">
+                                    <c:if test="${not empty pendingPaymentRefs[c.contractId]}">
                                         <a href="${pageContext.request.contextPath}/payment/pending?ref=${pendingPaymentRefs[c.contractId]}"
                                            class="btn btn-sm btn-accent action-icon-btn"
                                            data-bs-toggle="tooltip" data-bs-title="Thanh toan"

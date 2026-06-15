@@ -3,6 +3,7 @@ package com.carrental.dao;
 import com.carrental.config.DBContext;
 import com.carrental.model.ContractStatus;
 import com.carrental.model.PaymentMode;
+import com.carrental.model.PaymentRecord;
 import com.carrental.model.PaymentStatus;
 import com.carrental.model.PaymentTransaction;
 import com.carrental.model.PaymentType;
@@ -23,6 +24,8 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.UUID;
 
@@ -182,8 +185,8 @@ public class PaymentDAO {
 
                 if (hasPaidDeposit(conn, tx.getPaymentTransactionId())) {
                     reserveContractAfterDeposit(conn, tx.getContractId());
-                    markFinalPaidIfPrepaid(conn, tx.getContractId());
                 }
+                markFinalPaidIfPrepaid(conn, tx.getContractId());
 
                 conn.commit();
                 return true;
@@ -222,8 +225,8 @@ public class PaymentDAO {
 
                 if (hasPaidDeposit(conn, tx.getPaymentTransactionId())) {
                     reserveContractAfterDeposit(conn, tx.getContractId());
-                    markFinalPaidIfPrepaid(conn, tx.getContractId());
                 }
+                markFinalPaidIfPrepaid(conn, tx.getContractId());
 
                 conn.commit();
                 return true;
@@ -289,8 +292,8 @@ public class PaymentDAO {
 
                 if (hasPaidDeposit(conn, tx.getPaymentTransactionId())) {
                     reserveContractAfterDeposit(conn, tx.getContractId());
-                    markFinalPaidIfPrepaid(conn, tx.getContractId());
                 }
+                markFinalPaidIfPrepaid(conn, tx.getContractId());
 
                 markWebhookProcessed(conn, webhookEventId);
                 conn.commit();
@@ -538,6 +541,34 @@ public class PaymentDAO {
             ps.setString(8, note);
             ps.executeUpdate();
         }
+    }
+
+    private PaymentTransaction findLatestPendingTransactionByPaymentType(
+            Connection conn,
+            long contractId,
+            PaymentType paymentType) throws SQLException {
+        String sql = "SELECT TOP 1 tx.* FROM dbo.Payment_Transactions tx "
+                + "WHERE tx.ContractID = ? AND tx.Status = N'PENDING' "
+                + "AND EXISTS ("
+                + "    SELECT 1 FROM dbo.Payments p "
+                + "    WHERE p.PaymentTransactionID = tx.PaymentTransactionID "
+                + "    AND p.PaymentType = ? "
+                + "    AND p.PaymentStatus = N'PENDING'"
+                + ") "
+                + "ORDER BY tx.CreatedAt DESC, tx.PaymentTransactionID DESC";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setLong(1, contractId);
+            ps.setString(2, paymentType.name());
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? mapTransaction(rs) : null;
+            }
+        }
+    }
+
+    private boolean isExpired(PaymentTransaction tx) {
+        return tx != null
+                && tx.getExpiredAt() != null
+                && tx.getExpiredAt().isBefore(LocalDateTime.now());
     }
 
     private PaymentTransaction lockTransaction(Connection conn, String providerTransactionRef) throws SQLException {
@@ -953,6 +984,29 @@ public class PaymentDAO {
         return tx;
     }
 
+    private PaymentRecord mapPaymentRecord(ResultSet rs) throws SQLException {
+        PaymentRecord record = new PaymentRecord();
+        record.setPaymentId(rs.getLong("PaymentID"));
+        record.setPaymentType(rs.getString("PaymentType"));
+        record.setAmount(rs.getBigDecimal("Amount"));
+        record.setPaymentMethod(rs.getString("PaymentMethod"));
+        record.setPaymentStatus(rs.getString("PaymentStatus"));
+        record.setTransactionRef(rs.getString("TransactionRef"));
+        record.setNote(rs.getString("Note"));
+        record.setProvider(rs.getString("Provider"));
+        record.setProviderTransactionRef(rs.getString("ProviderTransactionRef"));
+
+        Timestamp paid = rs.getTimestamp("PaidAt");
+        if (paid != null) {
+            record.setPaidAt(paid.toLocalDateTime());
+        }
+        Timestamp created = rs.getTimestamp("CreatedAt");
+        if (created != null) {
+            record.setCreatedAt(created.toLocalDateTime());
+        }
+        return record;
+    }
+
     private long generateProviderOrderCode(long contractId) {
         long entropy = System.currentTimeMillis() % 100_000L;
         long random = ThreadLocalRandom.current().nextLong(100L, 999L);
@@ -974,6 +1028,120 @@ public class PaymentDAO {
     public Refund getPendingRefundByContractId(long contractId) {
         try (Connection conn = DBContext.getConnection()) {
             return findPendingRefund(conn, contractId);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public PaymentTransaction getLatestPendingBalanceTransactionByContractId(long contractId) {
+        try (Connection conn = DBContext.getConnection()) {
+            PaymentTransaction tx = findLatestPendingTransactionByPaymentType(
+                    conn, contractId, PaymentType.RENTAL_BALANCE);
+            if (tx != null && isExpired(tx)) {
+                expireTransaction(conn, tx.getPaymentTransactionId(), contractId);
+                return null;
+            }
+            return tx;
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public PaymentTransaction createRentalBalancePaymentLink(
+            long contractId,
+            String contractCode,
+            BigDecimal amount) {
+        if (safe(amount).compareTo(BigDecimal.ZERO) <= 0) {
+            return null;
+        }
+
+        try (Connection conn = DBContext.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                PaymentTransaction existing = findLatestPendingTransactionByPaymentType(
+                        conn, contractId, PaymentType.RENTAL_BALANCE);
+                if (existing != null) {
+                    if (!isExpired(existing) && safe(existing.getAmount()).compareTo(safe(amount)) == 0) {
+                        conn.commit();
+                        return existing;
+                    }
+                    expireTransaction(conn, existing.getPaymentTransactionId(), contractId);
+                }
+
+                LocalDateTime expiredAt = LocalDateTime.now().plusMinutes(15);
+                long providerOrderCode = generateProviderOrderCode(contractId);
+                String providerRef = Long.toString(providerOrderCode);
+
+                PaymentLinkRequest linkRequest = new PaymentLinkRequest();
+                linkRequest.setOrderCode(providerOrderCode);
+                linkRequest.setContractCode(contractCode);
+                linkRequest.setAmount(amount);
+                linkRequest.setExpiredAt(expiredAt);
+
+                PaymentLinkResponse paymentLink = createGatewayPaymentLink(linkRequest);
+                PaymentTransaction tx = insertPaymentTransaction(
+                        conn,
+                        contractId,
+                        paymentLink.getProvider(),
+                        providerRef,
+                        providerOrderCode,
+                        amount,
+                        paymentLink.getQrCode(),
+                        paymentLink.getCheckoutUrl(),
+                        paymentLink.getQrCode(),
+                        paymentLink.getRawResponse(),
+                        expiredAt);
+
+                insertPaymentLine(conn, contractId, tx.getPaymentTransactionId(), PaymentType.RENTAL_BALANCE,
+                        amount, providerRef, "Rental/driver balance collected by PayOS QR at settlement");
+
+                conn.commit();
+                return tx;
+            } catch (SQLException e) {
+                conn.rollback();
+                e.printStackTrace();
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    public List<PaymentRecord> getPaymentRecordsByContractId(long contractId) {
+        List<PaymentRecord> records = new ArrayList<>();
+        String sql = "SELECT p.PaymentID, p.PaymentType, p.Amount, p.PaymentMethod, p.PaymentStatus, "
+                + "p.PaidAt, p.TransactionRef, p.Note, p.CreatedAt, "
+                + "tx.Provider, tx.ProviderTransactionRef "
+                + "FROM dbo.Payments p "
+                + "LEFT JOIN dbo.Payment_Transactions tx ON tx.PaymentTransactionID = p.PaymentTransactionID "
+                + "WHERE p.ContractID = ? "
+                + "ORDER BY p.CreatedAt ASC, p.PaymentID ASC";
+        try (Connection conn = DBContext.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setLong(1, contractId);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    records.add(mapPaymentRecord(rs));
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return records;
+    }
+
+    public Refund getRefundById(long refundId) {
+        String sql = "SELECT * FROM dbo.Refunds WHERE RefundID = ?";
+        try (Connection conn = DBContext.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setLong(1, refundId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return mapRefund(rs);
+                }
+            }
         } catch (SQLException e) {
             e.printStackTrace();
         }

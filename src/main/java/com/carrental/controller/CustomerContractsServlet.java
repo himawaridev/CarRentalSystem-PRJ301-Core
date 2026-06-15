@@ -50,11 +50,9 @@ public class CustomerContractsServlet extends HttpServlet {
             Set<Long> pendingRefundContractIds = new HashSet<>();
             Map<Long, BigDecimal> cancellationRefundAmounts = new HashMap<>();
             for (Contract contract : contracts) {
-                if (ContractStatus.PENDING_PAYMENT.equals(contract.getStatus())) {
-                    PaymentTransaction tx = paymentDAO.getLatestPendingTransactionByContractId(contract.getContractId());
-                    if (tx != null) {
-                        pendingPaymentRefs.put(contract.getContractId(), tx.getProviderTransactionRef());
-                    }
+                PaymentTransaction tx = paymentDAO.getLatestPendingTransactionByContractId(contract.getContractId());
+                if (tx != null && canShowPendingPayment(contract)) {
+                    pendingPaymentRefs.put(contract.getContractId(), tx.getProviderTransactionRef());
                 }
                 if (canCustomerCancel(contract)) {
                     cancellableContractIds.add(contract.getContractId());
@@ -148,5 +146,12 @@ public class CustomerContractsServlet extends HttpServlet {
             return false;
         }
         return ChronoUnit.HOURS.between(LocalDateTime.now(), contract.getPickupAt()) >= FREE_CANCEL_HOURS;
+    }
+
+    private boolean canShowPendingPayment(Contract contract) {
+        return contract != null
+                && (ContractStatus.PENDING_PAYMENT.equals(contract.getStatus())
+                || ContractStatus.CAR_RETURNED.equals(contract.getStatus())
+                || ContractStatus.SETTLEMENT_PENDING.equals(contract.getStatus()));
     }
 }

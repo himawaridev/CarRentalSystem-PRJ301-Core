@@ -1,13 +1,13 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ taglib prefix="c" uri="jakarta.tags.core" %>
 <%@ taglib prefix="fmt" uri="jakarta.tags.fmt" %>
-<jsp:include page="/WEB-INF/includes/header.jsp"><jsp:param name="title" value="Thanh toan dat coc"/></jsp:include>
+<jsp:include page="/WEB-INF/includes/header.jsp"><jsp:param name="title" value="Thanh toan hop dong"/></jsp:include>
 
 <div class="container py-5">
     <div class="row justify-content-center">
         <div class="col-lg-7">
             <div class="card-custom">
-                <div class="card-header"><i class="bi bi-qr-code me-2"></i>Thanh toan giu xe</div>
+                <div class="card-header"><i class="bi bi-qr-code me-2"></i>Thanh toan hop dong</div>
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
                         <div>
@@ -20,7 +20,7 @@
                     <div id="paymentSuccessPanel" class="alert alert-custom-success mb-4"
                          style="${paymentTransaction.status == 'PAID' ? '' : 'display:none'}">
                         <i class="bi bi-check-circle-fill me-1"></i>
-                        Thanh toan thanh cong. Don xe cua ban da duoc giu, he thong se tu dong chuyen ve danh sach hop dong.
+                        Thanh toan thanh cong. He thong se tu dong chuyen ve danh sach hop dong.
                     </div>
 
                     <div id="paymentExpiredPanel" class="alert alert-warning mb-4" style="display:none">
@@ -67,7 +67,7 @@
                     </div>
 
                     <div class="text-end mt-4">
-                        <a href="${pageContext.request.contextPath}/my-contracts" class="btn btn-outline-accent me-2">
+                        <a href="${paymentReturnUrl}" class="btn btn-outline-accent me-2">
                             <i class="bi bi-arrow-left me-1"></i>Ve hop dong
                         </a>
                         <c:if test="${not empty paymentTransaction.providerCheckoutUrl}">
@@ -87,7 +87,7 @@
 (function () {
     const paymentRef = '${paymentTransaction.providerTransactionRef}';
     const statusUrl = '${pageContext.request.contextPath}/payment/status?ref=' + encodeURIComponent(paymentRef);
-    const redirectUrl = '${pageContext.request.contextPath}/my-contracts';
+    const redirectUrl = '${paymentReturnUrl}';
     const badge = document.getElementById('paymentStatusBadge');
     const waitingPanel = document.getElementById('paymentWaitingPanel');
     const successPanel = document.getElementById('paymentSuccessPanel');
