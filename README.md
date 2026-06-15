@@ -651,6 +651,15 @@ PAYOS_CHECKSUM_KEY=your_checksum_key
 APP_BASE_URL=http://localhost:9999/CarRentalSystem
 ```
 
+PayOS trong du an chi dung cho luong thu tien bang QR:
+
+- Khach thanh toan coc hoac thanh toan toan bo khi dat xe.
+- Neu khach moi thanh toan coc, den buoc quyet toan nhan vien tao QR PayOS de thu not tien thue/tai xe con lai.
+- Nhan vien bam kiem tra giao dich PayOS de doi soat. Khi PayOS bao `PAID`, he thong ghi nhan dong `RENTAL_BALANCE`.
+- Sau khi thu du tien thue/tai xe, nhan vien tao QR hoan coc thu cong cho tai khoan ngan hang cua khach, tu quet QR chuyen tien va nhap ma giao dich ngan hang de hoan tat.
+
+Du an khong dung PayOS Chi de tu dong chuyen tien hoan coc, vi Kenh Chi phu thuoc tai khoan dich/payOS/Napas va co the tu choi tai khoan hop le khi chuyen thu cong. Luong hoan coc mac dinh la QR thu cong de on dinh hon khi clone ve chay demo.
+
 Khi dung ngrok:
 
 ```properties
