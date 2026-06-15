@@ -1513,6 +1513,25 @@ a.text-accent:hover {
     border: 1px solid var(--primary-200);
 }
 
+.support-ticket-card {
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius);
+    padding: 16px;
+    background: var(--white);
+    box-shadow: var(--shadow-sm);
+}
+
+.support-ticket-card + .support-ticket-card {
+    margin-top: 14px;
+}
+
+.support-response {
+    border-left: 3px solid var(--primary);
+    background: var(--primary-50);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+}
+
 .settlement-invoice {
     background: var(--white);
     border: 1px solid var(--border);

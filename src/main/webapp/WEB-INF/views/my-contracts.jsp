@@ -69,6 +69,12 @@
                                        aria-label="Chi tiet hop dong">
                                         <i class="bi bi-eye"></i>
                                     </a>
+                                    <a href="${pageContext.request.contextPath}/support?contractId=${c.contractId}"
+                                       class="btn btn-sm btn-outline-accent action-icon-btn"
+                                       data-bs-toggle="tooltip" data-bs-title="Yeu cau ho tro"
+                                       aria-label="Yeu cau ho tro">
+                                        <i class="bi bi-life-preserver"></i>
+                                    </a>
                                     <c:if test="${not empty pendingPaymentRefs[c.contractId]}">
                                         <a href="${pageContext.request.contextPath}/payment/pending?ref=${pendingPaymentRefs[c.contractId]}"
                                            class="btn btn-sm btn-accent action-icon-btn"

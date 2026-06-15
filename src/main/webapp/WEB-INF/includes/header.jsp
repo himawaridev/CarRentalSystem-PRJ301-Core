@@ -35,10 +35,16 @@
                         <li class="nav-item">
                             <a class="nav-link" href="${ctx}/my-contracts"><i class="bi bi-file-text me-1"></i>Hop dong cua toi</a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="${ctx}/support"><i class="bi bi-life-preserver me-1"></i>Ho tro</a>
+                        </li>
                     </c:if>
                     <c:if test="${sessionScope.userRoles.contains('STAFF') or sessionScope.userRoles.contains('MANAGER') or sessionScope.userRoles.contains('ADMIN')}">
                         <li class="nav-item">
                             <a class="nav-link" href="${ctx}/staff/dashboard"><i class="bi bi-clipboard-check me-1"></i>Nhan vien</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="${ctx}/staff/support"><i class="bi bi-headset me-1"></i>Ho tro</a>
                         </li>
                     </c:if>
                     <c:if test="${sessionScope.userRoles.contains('MANAGER') or sessionScope.userRoles.contains('ADMIN')}">

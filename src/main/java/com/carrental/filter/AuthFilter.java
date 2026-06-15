@@ -9,7 +9,7 @@ import com.carrental.model.User;
 import java.io.IOException;
 import java.util.List;
 
-@WebFilter(urlPatterns = {"/book", "/profile", "/my-contracts", "/contract-detail", "/payment/*", "/staff/*", "/manager/*", "/driver/*", "/admin/*"})
+@WebFilter(urlPatterns = {"/book", "/profile", "/support", "/my-contracts", "/contract-detail", "/payment/*", "/staff/*", "/manager/*", "/driver/*", "/admin/*"})
 public class AuthFilter implements Filter {
 
     @Override
