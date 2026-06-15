@@ -188,7 +188,7 @@
 
                         <!-- Price footer -->
                         <div class="catalog-price-bar">
-                            <div>
+                            <div class="catalog-price-info">
                                 <div class="catalog-price">
                                     <fmt:formatNumber value="${car.dailyRate}" pattern="#,###"/> <small>VND/ngay</small>
                                 </div>
