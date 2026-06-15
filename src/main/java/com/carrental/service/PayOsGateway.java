@@ -9,6 +9,7 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.net.URISyntaxException;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -259,18 +260,48 @@ public class PayOsGateway {
     }
 
     private static String fileConfig(String key) {
-        Path configPath = Path.of(LOCAL_CONFIG_PATH);
-        if (!Files.isRegularFile(configPath)) {
-            return null;
+        for (Path configPath : candidateConfigPaths()) {
+            if (!Files.isRegularFile(configPath)) {
+                continue;
+            }
+
+            Properties properties = new Properties();
+            try (java.io.Reader reader = Files.newBufferedReader(configPath, StandardCharsets.UTF_8)) {
+                properties.load(reader);
+                String value = properties.getProperty(key);
+                if (value != null && !value.isBlank()) {
+                    return value;
+                }
+            } catch (IOException e) {
+                // Try the next location. Local config is optional.
+            }
+        }
+        return null;
+    }
+
+    private static List<Path> candidateConfigPaths() {
+        List<Path> paths = new ArrayList<>();
+        paths.add(Path.of(LOCAL_CONFIG_PATH));
+
+        String catalinaBase = System.getProperty("catalina.base");
+        if (catalinaBase != null && !catalinaBase.isBlank()) {
+            paths.add(Path.of(catalinaBase, LOCAL_CONFIG_PATH));
+            paths.add(Path.of(catalinaBase, "conf", "payment-local.properties"));
         }
 
-        Properties properties = new Properties();
-        try (java.io.Reader reader = Files.newBufferedReader(configPath, StandardCharsets.UTF_8)) {
-            properties.load(reader);
-            return properties.getProperty(key);
-        } catch (IOException e) {
-            return null;
+        try {
+            Path classLocation = Path.of(PayOsGateway.class.getProtectionDomain()
+                    .getCodeSource().getLocation().toURI());
+            Path current = Files.isDirectory(classLocation) ? classLocation : classLocation.getParent();
+            for (int i = 0; current != null && i < 8; i++) {
+                paths.add(current.resolve(LOCAL_CONFIG_PATH));
+                current = current.getParent();
+            }
+        } catch (URISyntaxException | IllegalArgumentException e) {
+            // Ignore invalid code source location.
         }
+
+        return paths;
     }
 
     private static String trimTrailingSlash(String value) {
