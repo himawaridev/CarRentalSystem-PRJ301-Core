@@ -159,16 +159,19 @@ Muc dich:
 Muc dich:
 
 - Tao connection den SQL Server.
-- La diem tap trung de sua URL, username, password.
+- Doc cau hinh database tu `config/database-local.properties`, bien moi truong hoac Java system property.
+- Source code khong chua username/password that.
 
 Ham chinh:
 
 - `getConnection()`: tra ve `java.sql.Connection` moi.
+- `requiredConfig(...)`: bao loi ro neu thieu `DB_USERNAME` hoac `DB_PASSWORD`.
+- `localConfig(...)`: doc file local/classpath `database-local.properties`.
 
 Lien quan:
 
 - Moi DAO deu goi `DBContext.getConnection()`.
-- Neu clone sang may khac bi loi DB, file nay la diem can kiem tra dau tien.
+- Neu clone sang may khac bi loi DB, kiem tra `config/database-local.properties` truoc.
 
 ## 5. Filters
 
@@ -1086,18 +1089,10 @@ Chu y:
 
 ## 11. SQL files
 
-- `database-schema.sql`: tao bang chinh, constraints, index.
-- `seed-demo-data.sql`: tai khoan, role, data demo.
-- `seed-payos-test-cars.sql`: xe test PayOS.
-- `seed-fleet-quantity-demo-cars.sql`: data xe co anh online.
-- `payment-refactor-migration.sql`: migration cho payment transaction/payment line.
-- `payment-gateway-refund-migration.sql`: migration lien quan refund gateway/manual.
-- `customer-bank-refund-migration.sql`: them bank info cho customer/user.
-- `support-ticket-migration.sql`: tao bang support ticket.
-- `check-payment-refactor.sql`: kiem tra schema payment sau refactor.
-- `diagnose-sql-connection.sql`: ho tro debug SQL connection.
-- `test-data.sql`: data test cu.
-- `enable-tcp.ps1`: helper bat TCP/IP SQL Server tren Windows.
+- `sql/setup-database.sql`: tao database moi, schema, constraint, index, trigger, cau hinh co ban, tai khoan demo, xe demo, xe test PayOS va anh online.
+- `sql/upgrade-existing-database.sql`: migration tong hop cho database cu can nang cap len schema moi.
+- `sql/check-database.sql`: kiem tra ket noi SQL Server va cac bang/cot payment/refund chinh.
+- `sql/enable-sqlserver-tcp.ps1`: helper bat TCP/IP SQL Server tren Windows.
 
 ## 12. Luong tinh nang chi tiet
 
@@ -1182,7 +1177,7 @@ Chu y:
 Neu muon hoc/bao ve project, nen doc theo thu tu:
 
 1. `README.md`: cach chay.
-2. `database-schema.sql`: bang va quan he.
+2. `setup-database.sql`: bang, quan he va du lieu demo.
 3. `DBContext.java`: ket noi DB.
 4. `AuthFilter.java`, `CharacterEncodingFilter.java`: request filtering.
 5. `LoginServlet`, `RegisterServlet`, `ProfileServlet`: user basic.

@@ -452,7 +452,6 @@ def add_nonfunctional_and_gaps(doc):
         "Trong môi trường hiện tại, lệnh mvn không có trong PATH nên không chạy được Maven test/package. Project có target/CarRentalSystem.war đã được tạo trước đó. Khi thử javac thủ công, mã biên dịch được đến lúc compiler bị chặn quyền khi đóng JAR servlet API ngoài workspace, nên tài liệu này dựa trên đọc source và đối chiếu artifact sẵn có.",
     )
     gaps = [
-        ("P1", "Mật khẩu database hard-code trong DBContext.", "Rò rỉ credential, khó deploy nhiều môi trường.", "Đưa URL/USERNAME/PASSWORD ra biến môi trường, context-param hoặc file config không commit."),
         ("P1", "Password người dùng lưu và so sánh dạng plain text dù field tên PasswordHash.", "Rủi ro bảo mật rất cao nếu DB bị lộ.", "Dùng BCrypt/Argon2, migrate dữ liệu test, đổi UserDAO.login/register/createUser."),
         ("P1", "Staff dashboard link tới /staff/contract-detail nhưng servlet hiện map /contract-detail và chỉ cho customer owner xem.", "Staff bấm mã hợp đồng có thể bị 404 hoặc không xem được chi tiết.", "Tạo StaffContractDetailServlet riêng hoặc sửa link/logic phân quyền chi tiết hợp đồng cho staff."),
         ("P2", "Không có CSRF token cho các form POST.", "User đã đăng nhập có thể bị ép gửi action ngoài ý muốn.", "Thêm CSRF token trong session và validate ở các servlet POST."),
@@ -476,7 +475,7 @@ def add_nonfunctional_and_gaps(doc):
             "Ẩn thông tin mật khẩu database khỏi source trước khi chia sẻ repository.",
             "Đổi plain text password sang hash nếu yêu cầu bảo mật được chấm.",
             "Chạy Maven package trên máy có Maven và Tomcat 10.1/Jakarta Servlet 6.",
-            "Kiểm thử thủ công các tài khoản CUSTOMER, STAFF, MANAGER, DRIVER, ADMIN theo test-data.sql.",
+            "Kiểm thử thủ công các tài khoản CUSTOMER, STAFF, MANAGER, DRIVER, ADMIN theo sql/setup-database.sql.",
         ],
     )
 
