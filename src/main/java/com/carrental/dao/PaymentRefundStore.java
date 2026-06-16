@@ -183,6 +183,21 @@ final class PaymentRefundStore {
         return null;
     }
 
+    static Refund findLatestByContractId(Connection conn, long contractId) throws SQLException {
+        String sql = "SELECT TOP 1 * FROM dbo.Refunds "
+                + "WHERE ContractID = ? "
+                + "ORDER BY CreatedAt DESC, RefundID DESC";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setLong(1, contractId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return PaymentRowMapper.mapRefund(rs);
+                }
+            }
+        }
+        return null;
+    }
+
     static BigDecimal calculateCancellationRefundAmount(Connection conn, long contractId) throws SQLException {
         BigDecimal refundablePaid = sumPayments(conn, contractId,
                 "PaymentType IN (N'DEPOSIT', N'RENTAL_PREPAID', N'DRIVER_FEE_PREPAID') "

@@ -110,6 +110,10 @@ public class PaymentDAO {
         return PaymentRefundWorkflow.getRefundById(refundId);
     }
 
+    public Refund getLatestRefundByContractId(long contractId) {
+        return PaymentRefundWorkflow.getLatestRefundByContractId(contractId);
+    }
+
     public boolean recordRentalBalancePayment(long contractId, BigDecimal amount, int receivedByUserId, String note) {
         return PaymentBalanceWorkflow.recordRentalBalancePayment(contractId, amount, receivedByUserId, note);
     }

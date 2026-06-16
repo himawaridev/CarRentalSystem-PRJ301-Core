@@ -360,6 +360,12 @@ a {
     border: 1px solid #fcd34d;
 }
 
+.status-chip-success {
+    color: #047857;
+    background: #d1fae5;
+    border: 1px solid #6ee7b7;
+}
+
 .status-chip-muted {
     color: var(--gray-500);
     background: var(--gray-100);
@@ -1719,6 +1725,24 @@ a.text-accent:hover {
 
 .settlement-refund-amount strong {
     font-size: 1.35rem;
+}
+
+.refund-summary-box {
+    border-radius: 8px;
+    padding: 0.85rem;
+    border: 1px solid var(--border);
+}
+
+.refund-summary-box.completed {
+    background: #ecfdf5;
+    border-color: #86efac;
+    color: #065f46;
+}
+
+.refund-summary-box.pending {
+    background: #fffbeb;
+    border-color: #fcd34d;
+    color: #92400e;
 }
 
 .settlement-action-panel {

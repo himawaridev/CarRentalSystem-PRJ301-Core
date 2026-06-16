@@ -40,6 +40,7 @@
                 </thead>
                 <tbody>
                     <c:forEach var="c" items="${contracts}">
+                        <c:set var="refundedAmountText" value="${refundedRefundAmountTexts[c.contractId]}"/>
                         <tr>
                             <td><strong class="text-accent">${c.contractCode}</strong></td>
                             <td>${c.pickupAt}</td>
@@ -59,6 +60,18 @@
                                     <c:when test="${c.status == 'CANCELLED'}"><span class="badge-status badge-cancelled">Da huy</span></c:when>
                                     <c:otherwise><span class="badge bg-secondary">${c.status}</span></c:otherwise>
                                 </c:choose>
+                                <c:if test="${refundedContractIds.contains(c.contractId)}">
+                                    <div class="mt-1">
+                                        <span class="badge-status badge-completed">
+                                            Da hoan ${refundedAmountText} VND
+                                        </span>
+                                    </div>
+                                </c:if>
+                                <c:if test="${pendingRefundContractIds.contains(c.contractId)}">
+                                    <div class="mt-1">
+                                        <span class="badge-status badge-pending">Dang cho hoan tien</span>
+                                    </div>
+                                </c:if>
                             </td>
                             <td class="text-muted small">${c.createdAt}</td>
                             <td class="table-actions-cell">
@@ -87,6 +100,12 @@
                                         <span class="status-chip status-chip-waiting"
                                               data-bs-toggle="tooltip" data-bs-title="Dang cho nhan vien hoan tien">
                                             <i class="bi bi-arrow-counterclockwise"></i>
+                                        </span>
+                                    </c:if>
+                                    <c:if test="${refundedContractIds.contains(c.contractId)}">
+                                        <span class="status-chip status-chip-success"
+                                              data-bs-toggle="tooltip" data-bs-title="Da hoan tien cho khach">
+                                            <i class="bi bi-check2-circle"></i>
                                         </span>
                                     </c:if>
                                     <!-- Cancel button: only show for cancellable statuses -->

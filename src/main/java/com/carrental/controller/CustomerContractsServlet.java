@@ -6,6 +6,7 @@ import com.carrental.dao.UserDAO;
 import com.carrental.model.Contract;
 import com.carrental.model.ContractStatus;
 import com.carrental.model.PaymentTransaction;
+import com.carrental.model.PaymentStatus;
 import com.carrental.model.Refund;
 import com.carrental.model.User;
 import jakarta.servlet.ServletException;
@@ -13,11 +14,13 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.text.NumberFormat;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.HashSet;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -48,7 +51,9 @@ public class CustomerContractsServlet extends HttpServlet {
             Map<Long, String> pendingPaymentRefs = new HashMap<>();
             Set<Long> cancellableContractIds = new HashSet<>();
             Set<Long> pendingRefundContractIds = new HashSet<>();
+            Set<Long> refundedContractIds = new HashSet<>();
             Map<Long, BigDecimal> cancellationRefundAmounts = new HashMap<>();
+            Map<Long, String> refundedRefundAmountTexts = new HashMap<>();
             for (Contract contract : contracts) {
                 PaymentTransaction tx = paymentDAO.getLatestPendingTransactionByContractId(contract.getContractId());
                 if (tx != null && canShowPendingPayment(contract)) {
@@ -61,7 +66,17 @@ public class CustomerContractsServlet extends HttpServlet {
                 Refund pendingRefund = paymentDAO.getPendingRefundByContractId(contract.getContractId());
                 if (pendingRefund != null) {
                     pendingRefundContractIds.add(contract.getContractId());
-                } else if (PAID_CANCELLABLE.contains(contract.getStatus())) {
+                } else {
+                    Refund latestRefund = paymentDAO.getLatestRefundByContractId(contract.getContractId());
+                    if (latestRefund != null && latestRefund.getStatus() == PaymentStatus.REFUNDED) {
+                        refundedContractIds.add(contract.getContractId());
+                        refundedRefundAmountTexts.put(
+                                contract.getContractId(), formatMoney(latestRefund.getRefundAmount()));
+                    }
+                }
+
+                if (!pendingRefundContractIds.contains(contract.getContractId())
+                        && PAID_CANCELLABLE.contains(contract.getStatus())) {
                     BigDecimal refundAmount = paymentDAO.calculateCancellationRefundAmount(contract.getContractId());
                     if (refundAmount.compareTo(BigDecimal.ZERO) > 0) {
                         cancellationRefundAmounts.put(contract.getContractId(), refundAmount);
@@ -71,7 +86,9 @@ public class CustomerContractsServlet extends HttpServlet {
             request.setAttribute("pendingPaymentRefs", pendingPaymentRefs);
             request.setAttribute("cancellableContractIds", cancellableContractIds);
             request.setAttribute("pendingRefundContractIds", pendingRefundContractIds);
+            request.setAttribute("refundedContractIds", refundedContractIds);
             request.setAttribute("cancellationRefundAmounts", cancellationRefundAmounts);
+            request.setAttribute("refundedRefundAmountTexts", refundedRefundAmountTexts);
         }
 
         // Flash messages
@@ -153,5 +170,10 @@ public class CustomerContractsServlet extends HttpServlet {
                 && (ContractStatus.PENDING_PAYMENT.equals(contract.getStatus())
                 || ContractStatus.CAR_RETURNED.equals(contract.getStatus())
                 || ContractStatus.SETTLEMENT_PENDING.equals(contract.getStatus()));
+    }
+
+    private String formatMoney(BigDecimal value) {
+        NumberFormat format = NumberFormat.getIntegerInstance(Locale.forLanguageTag("vi-VN"));
+        return format.format(value == null ? BigDecimal.ZERO : value);
     }
 }

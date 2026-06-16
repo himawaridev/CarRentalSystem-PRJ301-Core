@@ -2,13 +2,17 @@ package com.carrental.controller;
 
 import com.carrental.dao.ContractDAO;
 import com.carrental.dao.DriverDAO;
+import com.carrental.dao.PaymentDAO;
 import com.carrental.dao.UserDAO;
 import com.carrental.model.*;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.text.NumberFormat;
 import java.util.List;
+import java.util.Locale;
 
 @WebServlet("/contract-detail")
 public class ContractDetailServlet extends HttpServlet {
@@ -55,6 +59,22 @@ public class ContractDetailServlet extends HttpServlet {
         request.setAttribute("details", details);
         request.setAttribute("driverAssignments", driverAssignments);
 
+        PaymentDAO paymentDAO = new PaymentDAO();
+        Refund latestRefund = paymentDAO.getLatestRefundByContractId(contractId);
+        request.setAttribute("latestRefund", latestRefund);
+        request.setAttribute("refundCompleted",
+                latestRefund != null && latestRefund.getStatus() == PaymentStatus.REFUNDED);
+        request.setAttribute("refundPending",
+                latestRefund != null && latestRefund.getStatus() == PaymentStatus.REFUND_PENDING);
+        request.setAttribute("latestRefundAmountText",
+                latestRefund == null ? null : formatMoney(latestRefund.getRefundAmount()));
+        request.setAttribute("paymentRecords", paymentDAO.getPaymentRecordsByContractId(contractId));
+
         request.getRequestDispatcher("/WEB-INF/views/contract-detail.jsp").forward(request, response);
+    }
+
+    private String formatMoney(BigDecimal value) {
+        NumberFormat format = NumberFormat.getIntegerInstance(Locale.forLanguageTag("vi-VN"));
+        return format.format(value == null ? BigDecimal.ZERO : value);
     }
 }

@@ -126,6 +126,15 @@ final class PaymentRefundWorkflow {
         return null;
     }
 
+    static Refund getLatestRefundByContractId(long contractId) {
+        try (Connection conn = DBContext.getConnection()) {
+            return PaymentRefundStore.findLatestByContractId(conn, contractId);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
     static BigDecimal calculateCancellationRefundAmount(long contractId) {
         try (Connection conn = DBContext.getConnection()) {
             return PaymentRefundStore.calculateCancellationRefundAmount(conn, contractId);
