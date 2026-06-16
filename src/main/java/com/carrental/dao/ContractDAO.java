@@ -368,7 +368,7 @@ public class ContractDAO {
                 || message.contains("ProviderCheckoutUrl")
                 || message.contains("CK_Payments_Type")
                 || message.contains("CK_Payments_Status")) {
-            return "Database chua cap nhat migration thanh toan moi. Hay chay sql/payment-refactor-migration.sql va sql/payment-gateway-refund-migration.sql roi thu lai.";
+            return "Database chua cap nhat migration thanh toan moi. Hay chay sql/upgrade-existing-database.sql roi thu lai.";
         }
         if (message.contains("Missing PAYOS_CLIENT_ID")
                 || message.contains("PAYOS_CLIENT_ID, PAYOS_API_KEY")) {

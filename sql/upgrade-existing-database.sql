@@ -1,9 +1,20 @@
+/*
+    CarRentalSystem upgrade script for an existing old CarRentalDB.
+    Use this only when the database was created before the latest schema changes.
+    New machines should run sql/setup-database.sql instead.
+*/
+
+
+/* ============================================================
+   1. Payment contract and transaction refactor
+   ============================================================ */
+
 USE master;
 GO
 
 IF DB_ID(N'CarRentalDB') IS NULL
 BEGIN
-    RAISERROR(N'Database CarRentalDB does not exist on this SQL Server instance. Connect to localhost,1433 with the same login used by DBContext, or run sql/database-schema.sql first for a fresh database.', 16, 1);
+    RAISERROR(N'Database CarRentalDB does not exist on this SQL Server instance. Connect to localhost,1433 with the same login used by DBContext, or run sql/setup-database.sql first for a fresh database.', 16, 1);
     RETURN;
 END;
 GO
@@ -13,7 +24,7 @@ GO
 
 IF OBJECT_ID(N'dbo.Contracts', N'U') IS NULL
 BEGIN
-    RAISERROR(N'dbo.Contracts does not exist in CarRentalDB. This migration is only for an existing old schema. For a new database, run sql/database-schema.sql first.', 16, 1);
+    RAISERROR(N'dbo.Contracts does not exist in CarRentalDB. This migration is only for an existing old schema. For a new database, run sql/setup-database.sql first.', 16, 1);
     RETURN;
 END;
 GO
@@ -324,4 +335,195 @@ BEGIN
         ROLLBACK TRANSACTION;
     END
 END;
+GO
+
+
+/* ============================================================
+   2. Gateway payment, webhook, and manual refund fields
+   ============================================================ */
+
+USE master;
+GO
+
+IF DB_ID(N'CarRentalDB') IS NULL
+BEGIN
+    RAISERROR(N'Database CarRentalDB does not exist. Run sql/setup-database.sql first.', 16, 1);
+    RETURN;
+END;
+GO
+
+USE CarRentalDB;
+GO
+
+IF OBJECT_ID(N'dbo.Payment_Transactions', N'U') IS NULL
+BEGIN
+    RAISERROR(N'dbo.Payment_Transactions does not exist. Run sql/upgrade-existing-database.sql from the beginning first.', 16, 1);
+    RETURN;
+END;
+GO
+
+IF COL_LENGTH(N'dbo.Payment_Transactions', N'ProviderOrderCode') IS NULL
+    ALTER TABLE dbo.Payment_Transactions ADD ProviderOrderCode BIGINT NULL;
+IF COL_LENGTH(N'dbo.Payment_Transactions', N'ProviderCheckoutUrl') IS NULL
+    ALTER TABLE dbo.Payment_Transactions ADD ProviderCheckoutUrl NVARCHAR(500) NULL;
+IF COL_LENGTH(N'dbo.Payment_Transactions', N'ProviderQrCode') IS NULL
+    ALTER TABLE dbo.Payment_Transactions ADD ProviderQrCode NVARCHAR(MAX) NULL;
+GO
+
+IF OBJECT_ID(N'dbo.Payment_Webhook_Events', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.Payment_Webhook_Events (
+        WebhookEventID BIGINT IDENTITY(1,1) PRIMARY KEY,
+        Provider NVARCHAR(40) NOT NULL,
+        EventRef NVARCHAR(150) NOT NULL,
+        ProviderTransactionRef NVARCHAR(100) NULL,
+        Payload NVARCHAR(MAX) NULL,
+        Signature NVARCHAR(200) NULL,
+        ProcessingStatus NVARCHAR(30) NOT NULL DEFAULT N'RECEIVED',
+        ErrorMessage NVARCHAR(500) NULL,
+        CreatedAt DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
+        ProcessedAt DATETIME2(0) NULL,
+        CONSTRAINT UQ_PaymentWebhookEvents_Provider_EventRef UNIQUE (Provider, EventRef),
+        CONSTRAINT CK_PaymentWebhookEvents_Status CHECK (
+            ProcessingStatus IN (N'RECEIVED', N'PROCESSED', N'DUPLICATE', N'FAILED')
+        )
+    );
+END;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'UX_PaymentTransactions_ProviderOrderCode')
+    CREATE UNIQUE INDEX UX_PaymentTransactions_ProviderOrderCode
+    ON dbo.Payment_Transactions(ProviderOrderCode)
+    WHERE ProviderOrderCode IS NOT NULL;
+GO
+
+IF COL_LENGTH(N'dbo.Refunds', N'RefundMethod') IS NULL
+    ALTER TABLE dbo.Refunds ADD RefundMethod NVARCHAR(30) NOT NULL
+        CONSTRAINT DF_Refunds_RefundMethod DEFAULT N'GATEWAY_REFUND';
+IF COL_LENGTH(N'dbo.Refunds', N'ProofOfRefund') IS NULL
+    ALTER TABLE dbo.Refunds ADD ProofOfRefund NVARCHAR(1000) NULL;
+IF COL_LENGTH(N'dbo.Refunds', N'CompletedByUserID') IS NULL
+    ALTER TABLE dbo.Refunds ADD CompletedByUserID INT NULL;
+IF COL_LENGTH(N'dbo.Refunds', N'CompletedAt') IS NULL
+    ALTER TABLE dbo.Refunds ADD CompletedAt DATETIME2(0) NULL;
+GO
+
+IF EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = N'CK_Refunds_Method')
+    ALTER TABLE dbo.Refunds DROP CONSTRAINT CK_Refunds_Method;
+IF EXISTS (SELECT 1 FROM sys.check_constraints WHERE name = N'CK_Refunds_Status')
+    ALTER TABLE dbo.Refunds DROP CONSTRAINT CK_Refunds_Status;
+GO
+
+ALTER TABLE dbo.Refunds ADD CONSTRAINT CK_Refunds_Method CHECK (
+    RefundMethod IN (
+        N'GATEWAY_REFUND',
+        N'CASH_AT_COUNTER',
+        N'MANUAL_BANK_TRANSFER',
+        N'WALLET_CREDIT'
+    )
+);
+ALTER TABLE dbo.Refunds ADD CONSTRAINT CK_Refunds_Status CHECK (
+    Status IN (N'REFUND_PENDING', N'REFUNDED', N'FAILED')
+);
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = N'FK_Refunds_CompletedBy')
+    ALTER TABLE dbo.Refunds ADD CONSTRAINT FK_Refunds_CompletedBy
+        FOREIGN KEY (CompletedByUserID) REFERENCES dbo.Users(UserID);
+GO
+
+
+/* ============================================================
+   3. Customer bank account fields
+   ============================================================ */
+
+USE CarRentalDB;
+GO
+
+SET QUOTED_IDENTIFIER ON;
+GO
+
+IF COL_LENGTH(N'dbo.Users', N'BankCode') IS NULL
+    ALTER TABLE dbo.Users ADD BankCode NVARCHAR(30) NULL;
+
+IF COL_LENGTH(N'dbo.Users', N'BankName') IS NULL
+    ALTER TABLE dbo.Users ADD BankName NVARCHAR(120) NULL;
+
+IF COL_LENGTH(N'dbo.Users', N'BankAccountNumber') IS NULL
+    ALTER TABLE dbo.Users ADD BankAccountNumber NVARCHAR(30) NULL;
+
+IF COL_LENGTH(N'dbo.Users', N'BankAccountHolder') IS NULL
+    ALTER TABLE dbo.Users ADD BankAccountHolder NVARCHAR(120) NULL;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_Users_BankAccountNumber_NotNull')
+    CREATE INDEX IX_Users_BankAccountNumber_NotNull
+    ON dbo.Users(BankAccountNumber)
+    WHERE BankAccountNumber IS NOT NULL;
+GO
+
+
+/* ============================================================
+   4. Support ticket table
+   ============================================================ */
+
+USE CarRentalDB;
+GO
+
+IF OBJECT_ID(N'dbo.Support_Tickets', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.Support_Tickets (
+        TicketID BIGINT IDENTITY(1,1) PRIMARY KEY,
+        TicketCode NVARCHAR(30) NOT NULL UNIQUE,
+        UserID INT NOT NULL,
+        ContractID BIGINT NULL,
+        Category NVARCHAR(40) NOT NULL,
+        Subject NVARCHAR(150) NOT NULL,
+        Message NVARCHAR(1000) NOT NULL,
+        Status NVARCHAR(30) NOT NULL DEFAULT N'OPEN',
+        Priority NVARCHAR(20) NOT NULL DEFAULT N'NORMAL',
+        StaffResponse NVARCHAR(1000) NULL,
+        AssignedToUserID INT NULL,
+        ResolvedAt DATETIME2(0) NULL,
+        CreatedAt DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
+        UpdatedAt DATETIME2(0) NULL,
+        CONSTRAINT FK_SupportTickets_Users FOREIGN KEY (UserID)
+            REFERENCES dbo.Users(UserID),
+        CONSTRAINT FK_SupportTickets_Contracts FOREIGN KEY (ContractID)
+            REFERENCES dbo.Contracts(ContractID),
+        CONSTRAINT FK_SupportTickets_AssignedTo FOREIGN KEY (AssignedToUserID)
+            REFERENCES dbo.Users(UserID),
+        CONSTRAINT CK_SupportTickets_Category CHECK (
+            Category IN (N'BANK_INFO', N'PAYMENT', N'REFUND', N'CONTRACT', N'ACCOUNT', N'OTHER')
+        ),
+        CONSTRAINT CK_SupportTickets_Status CHECK (
+            Status IN (N'OPEN', N'IN_PROGRESS', N'RESOLVED', N'REJECTED')
+        ),
+        CONSTRAINT CK_SupportTickets_Priority CHECK (
+            Priority IN (N'LOW', N'NORMAL', N'HIGH')
+        )
+    );
+END
+GO
+
+IF NOT EXISTS (
+    SELECT 1 FROM sys.indexes
+    WHERE name = N'IX_SupportTickets_Status_CreatedAt'
+      AND object_id = OBJECT_ID(N'dbo.Support_Tickets')
+)
+BEGIN
+    CREATE INDEX IX_SupportTickets_Status_CreatedAt
+    ON dbo.Support_Tickets(Status, CreatedAt DESC);
+END
+GO
+
+IF NOT EXISTS (
+    SELECT 1 FROM sys.indexes
+    WHERE name = N'IX_SupportTickets_User_CreatedAt'
+      AND object_id = OBJECT_ID(N'dbo.Support_Tickets')
+)
+BEGIN
+    CREATE INDEX IX_SupportTickets_User_CreatedAt
+    ON dbo.Support_Tickets(UserID, CreatedAt DESC);
+END
 GO
