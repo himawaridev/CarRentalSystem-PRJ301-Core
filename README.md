@@ -72,13 +72,27 @@ Chon server Tomcat vua them va de context path:
 
 ### 2. Cau hinh SQL Server
 
-Project mac dinh ket noi:
+Project doc cau hinh database tu file local bi ignore:
 
 ```text
-jdbc:sqlserver://localhost:1433;databaseName=CarRentalDB
-username: sa
-password: Dung22102003@@@
+config/database-local.properties
 ```
+
+Tao file nay bang cach copy file mau:
+
+```text
+config/database-local.example.properties
+```
+
+Noi dung can dien:
+
+```properties
+DB_URL=jdbc:sqlserver://localhost:1433;databaseName=CarRentalDB;encrypt=true;trustServerCertificate=true;loginTimeout=10;
+DB_USERNAME=sa
+DB_PASSWORD=your_sql_server_password
+```
+
+Co the thay file local bang bien moi truong `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` neu chay tren server/deploy rieng.
 
 Can dam bao SQL Server:
 
@@ -88,31 +102,35 @@ Can dam bao SQL Server:
 - TCP/IP enabled,
 - port `1433` mo.
 
-Neu may ban dung username/password khac, sua file:
-
-```text
-src/main/java/com/carrental/config/DBContext.java
-```
-
 ### 3. Tao database va nap du lieu mau
 
-Mo SSMS, ket noi SQL Server, chay lan luot:
+Mo SSMS, ket noi SQL Server, chay:
 
 ```text
-sql/database-schema.sql
-sql/seed-demo-data.sql
-sql/seed-payos-test-cars.sql
-sql/seed-fleet-quantity-demo-cars.sql
+sql/setup-database.sql
 ```
 
-Cac file seed da co `ImageUrl` online tu `4kwallpapers.com`, nen sau khi clone va seed DB,
+File setup da tao schema, tai khoan demo, xe demo, xe test PayOS va `ImageUrl` online tu `4kwallpapers.com`, nen sau khi clone va seed DB,
 trang danh sach xe se hien anh neu may co internet.
+
+Neu muon xoa database cu va tao lai sach tu dau, trong SSMS chay truoc:
+
+```sql
+USE master;
+ALTER DATABASE CarRentalDB SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+DROP DATABASE CarRentalDB;
+```
+
+Sau do chay lai:
+
+```text
+sql/setup-database.sql
+```
 
 Co the chay script kiem tra:
 
 ```text
-sql/check-payment-refactor.sql
-sql/diagnose-sql-connection.sql
+sql/check-database.sql
 ```
 
 ### 4. Build va chay
@@ -213,20 +231,16 @@ He thong phuc vu quy trinh cho thue xe:
 ```text
 CarRentalSystem/
 +-- config/
-|   +-- payment-local.properties       # cau hinh PayOS local, bi ignore
+|   +-- database-local.example.properties
 +-- docs/
 |   +-- CarRentalSystem_Functional_Requirements.docx
 |   +-- build_requirements_doc.py
 |   +-- payment-webhook-refund-design.md
 +-- sql/
-|   +-- database-schema.sql
-|   +-- payment-refactor-migration.sql
-|   +-- payment-gateway-refund-migration.sql
-|   +-- seed-demo-data.sql
-|   +-- seed-payos-test-cars.sql
-|   +-- seed-fleet-quantity-demo-cars.sql
-|   +-- check-payment-refactor.sql
-|   +-- diagnose-sql-connection.sql
+|   +-- setup-database.sql
+|   +-- upgrade-existing-database.sql
+|   +-- check-database.sql
+|   +-- enable-sqlserver-tcp.ps1
 +-- src/main/java/com/carrental/
 |   +-- config/
 |   |   +-- DBContext.java
@@ -580,16 +594,29 @@ File ket noi:
 src/main/java/com/carrental/config/DBContext.java
 ```
 
-Mac dinh hien tai:
+File nay khong chua username/password that. Khi chay local, tao file:
 
-```java
-private static final String URL =
-    "jdbc:sqlserver://localhost:1433;databaseName=CarRentalDB;encrypt=true;trustServerCertificate=true;loginTimeout=10;";
-private static final String USERNAME = "sa";
-private static final String PASSWORD = "your_password";
+```text
+config/database-local.properties
 ```
 
-Khi chay tren may khac, can sua `USERNAME` va `PASSWORD` theo SQL Server cua may do.
+Tu file mau:
+
+```text
+config/database-local.example.properties
+```
+
+Noi dung:
+
+```properties
+DB_URL=jdbc:sqlserver://localhost:1433;databaseName=CarRentalDB;encrypt=true;trustServerCertificate=true;loginTimeout=10;
+DB_USERNAME=sa
+DB_PASSWORD=your_sql_server_password
+```
+
+`config/database-local.properties` da nam trong `.gitignore`, khong commit len Git.
+Khi deploy server, co the dung bien moi truong `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`
+hoac Java system property `db.url`, `db.username`, `db.password`.
 
 Yeu cau SQL Server:
 
@@ -601,35 +628,39 @@ Yeu cau SQL Server:
 
 ## Tao database va seed du lieu
 
-Neu tao database moi:
+Tat ca huong dan SQL nam trong README chung nay. Thu muc `sql/` chi giu script can chay.
+
+Neu tao database moi hoac vua xoa `CarRentalDB`:
 
 1. Mo SSMS.
 2. Chay:
 
 ```text
-sql/database-schema.sql
+sql/setup-database.sql
 ```
 
-3. Sau do chay seed:
+File nay tao schema moi nhat, tai khoan demo, xe demo, xe PayOS test va anh online.
+
+Neu database cu da ton tai va can nang cap len schema moi:
 
 ```text
-sql/seed-demo-data.sql
-sql/seed-payos-test-cars.sql
-sql/seed-fleet-quantity-demo-cars.sql
+sql/upgrade-existing-database.sql
 ```
 
-Neu database cu da ton tai va can nang cap payment/refund:
+Neu can xoa database cu de tao lai sach tu dau:
 
-```text
-sql/payment-refactor-migration.sql
-sql/payment-gateway-refund-migration.sql
+```sql
+USE master;
+ALTER DATABASE CarRentalDB SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+DROP DATABASE CarRentalDB;
 ```
+
+Sau do chay `sql/setup-database.sql`.
 
 Script ho tro kiem tra:
 
 ```text
-sql/check-payment-refactor.sql
-sql/diagnose-sql-connection.sql
+sql/check-database.sql
 ```
 
 ## Cau hinh PayOS
@@ -918,7 +949,7 @@ Kiem tra:
 - SQL Server dang chay,
 - TCP/IP port 1433 da enable,
 - database `CarRentalDB` ton tai,
-- user/password trong `DBContext.java` dung,
+- `config/database-local.properties` da co `DB_USERNAME` va `DB_PASSWORD` dung,
 - firewall khong chan SQL Server.
 
 ### Anh xe bi vo layout
@@ -933,6 +964,7 @@ Kiem tra:
 
 Khong commit cac file/chia se thong tin sau:
 
+- `config/database-local.properties`,
 - `config/payment-local.properties`,
 - PayOS client id/api key/checksum key that,
 - ngrok authtoken,
