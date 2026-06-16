@@ -1,6 +1,7 @@
 package com.carrental.model;
 
 import java.time.LocalDateTime;
+import java.util.Locale;
 
 /**
  * Maps to dbo.Users table.
@@ -69,7 +70,7 @@ public class User {
     public void setBankAccountNumber(String bankAccountNumber) { this.bankAccountNumber = normalize(bankAccountNumber); }
 
     public String getBankAccountHolder() { return bankAccountHolder; }
-    public void setBankAccountHolder(String bankAccountHolder) { this.bankAccountHolder = normalize(bankAccountHolder); }
+    public void setBankAccountHolder(String bankAccountHolder) { this.bankAccountHolder = normalizeAccountHolder(bankAccountHolder); }
 
     public boolean hasRefundBankInfo() {
         return !isBlank(bankCode)
@@ -103,6 +104,11 @@ public class User {
 
     private String normalize(String value) {
         return value == null ? null : value.trim();
+    }
+
+    private String normalizeAccountHolder(String value) {
+        String normalized = normalize(value);
+        return normalized == null ? null : normalized.toUpperCase(Locale.ROOT);
     }
 
     private boolean isBlank(String value) {

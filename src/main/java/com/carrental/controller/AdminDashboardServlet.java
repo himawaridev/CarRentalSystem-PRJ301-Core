@@ -90,7 +90,7 @@ public class AdminDashboardServlet extends HttpServlet {
             String email = normalize(request.getParameter("email"));
             String bankCode = normalize(request.getParameter("bankCode"));
             String bankAccountNumber = normalizeAccount(request.getParameter("bankAccountNumber"));
-            String bankAccountHolder = normalize(request.getParameter("bankAccountHolder"));
+            String bankAccountHolder = normalizeAccountHolder(request.getParameter("bankAccountHolder"));
             String bankName = isBlank(bankCode) ? null : BANKS.get(bankCode);
 
             if (isBlank(fullName) || isBlank(email)) {
@@ -161,6 +161,11 @@ public class AdminDashboardServlet extends HttpServlet {
 
     private String normalizeAccount(String value) {
         return value == null ? null : value.replaceAll("\\s+", "").trim();
+    }
+
+    private String normalizeAccountHolder(String value) {
+        String normalized = normalize(value);
+        return normalized == null ? null : normalized.toUpperCase(Locale.ROOT);
     }
 
     private boolean isBlank(String value) {

@@ -6,6 +6,7 @@ import com.carrental.model.User;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Data Access Object for Users, Customers, Roles, and authentication.
@@ -250,7 +251,7 @@ public class UserDAO {
                         ps.setString(4, normalize(bankCode));
                         ps.setString(5, normalize(bankName));
                         ps.setString(6, normalize(bankAccountNumber));
-                        ps.setString(7, normalize(bankAccountHolder));
+                        ps.setString(7, normalizeAccountHolder(bankAccountHolder));
                         ps.setInt(8, userId);
                     }
                     ps.executeUpdate();
@@ -284,7 +285,7 @@ public class UserDAO {
             ps.setString(7, normalize(user.getBankCode()));
             ps.setString(8, normalize(user.getBankName()));
             ps.setString(9, normalize(user.getBankAccountNumber()));
-            ps.setString(10, normalize(user.getBankAccountHolder()));
+            ps.setString(10, normalizeAccountHolder(user.getBankAccountHolder()));
             ps.setInt(11, user.getUserId());
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
@@ -509,5 +510,10 @@ public class UserDAO {
 
     private String normalize(String value) {
         return value == null ? null : value.trim().replaceAll("\\s+", " ");
+    }
+
+    private String normalizeAccountHolder(String value) {
+        String normalized = normalize(value);
+        return normalized == null ? null : normalized.toUpperCase(Locale.ROOT);
     }
 }

@@ -10,6 +10,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 
 @WebServlet("/profile")
@@ -80,7 +81,7 @@ public class ProfileServlet extends HttpServlet {
         String bankCode = normalize(request.getParameter("bankCode"));
         String bankName = BANKS.get(bankCode);
         String bankAccountNumber = normalizeAccount(request.getParameter("bankAccountNumber"));
-        String bankAccountHolder = normalize(request.getParameter("bankAccountHolder"));
+        String bankAccountHolder = normalizeAccountHolder(request.getParameter("bankAccountHolder"));
 
         if (isBlank(fullName)) {
             forwardWithError(request, response, current, "Vui long nhap ho ten.");
@@ -160,6 +161,11 @@ public class ProfileServlet extends HttpServlet {
 
     private String normalizeAccount(String value) {
         return value == null ? null : value.replaceAll("\\s+", "").trim();
+    }
+
+    private String normalizeAccountHolder(String value) {
+        String normalized = normalize(value);
+        return normalized == null ? null : normalized.toUpperCase(Locale.ROOT);
     }
 
     private boolean isBlank(String value) {

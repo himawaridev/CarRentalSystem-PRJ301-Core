@@ -122,8 +122,9 @@
                                         </div>
                                         <div class="col-md-4">
                                             <label class="form-label">Chu tai khoan</label>
-                                            <input type="text" name="bankAccountHolder" class="form-control"
-                                                   value="${u.bankAccountHolder}">
+                                            <input type="text" name="bankAccountHolder" class="form-control text-uppercase"
+                                                   value="${u.bankAccountHolder}" maxlength="120"
+                                                   placeholder="VD: NGUYEN VAN A">
                                         </div>
                                     </div>
                                 </div>
