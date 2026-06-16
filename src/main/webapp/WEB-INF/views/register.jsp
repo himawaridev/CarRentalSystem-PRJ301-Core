@@ -13,6 +13,9 @@
         <c:if test="${not empty error}">
             <div class="alert alert-custom-error"><i class="bi bi-exclamation-circle me-1"></i>${error}</div>
         </c:if>
+        <div class="alert alert-custom-info mb-3">
+            <i class="bi bi-envelope-check me-1"></i>Sau khi dang ky, he thong se gui ma xac minh toi email cua ban.
+        </div>
 
         <form method="post" action="${pageContext.request.contextPath}/register">
             <div class="row">
@@ -27,7 +30,8 @@
             </div>
             <div class="mb-3">
                 <label class="form-label">Mat khau *</label>
-                <input type="password" name="password" class="form-control" required minlength="4">
+                <input type="password" name="password" class="form-control" required minlength="8">
+                <div class="form-text">Toi thieu 8 ky tu.</div>
             </div>
             <div class="mb-3">
                 <label class="form-label">Ho va ten *</label>

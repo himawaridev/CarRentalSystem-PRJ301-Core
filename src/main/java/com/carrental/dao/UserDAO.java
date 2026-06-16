@@ -2,6 +2,7 @@ package com.carrental.dao;
 
 import com.carrental.config.DBContext;
 import com.carrental.model.User;
+import com.carrental.service.PasswordHasher;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -13,25 +14,38 @@ import java.util.Locale;
  */
 public class UserDAO {
 
-    private static final String USER_COLUMNS = "UserID, Username, Email, PasswordHash, FullName, Phone, "
-            + "Address, IdentityNumber, Status, BankCode, BankName, BankAccountNumber, BankAccountHolder, CreatedAt";
-    private static final String USER_COLUMNS_QUALIFIED = "u.UserID, u.Username, u.Email, u.PasswordHash, "
+    static final String USER_COLUMNS = "UserID, Username, Email, PasswordHash, FullName, Phone, "
+            + "Address, IdentityNumber, Status, BankCode, BankName, BankAccountNumber, BankAccountHolder, "
+            + "EmailVerified, EmailVerifiedAt, AuthProvider, AuthProviderSubject, CreatedAt";
+    static final String USER_COLUMNS_QUALIFIED = "u.UserID, u.Username, u.Email, u.PasswordHash, "
             + "u.FullName, u.Phone, u.Address, u.IdentityNumber, u.Status, u.BankCode, u.BankName, "
-            + "u.BankAccountNumber, u.BankAccountHolder, u.CreatedAt";
+            + "u.BankAccountNumber, u.BankAccountHolder, u.EmailVerified, u.EmailVerifiedAt, "
+            + "u.AuthProvider, u.AuthProviderSubject, u.CreatedAt";
 
     /**
-     * Authenticate user by username and password hash.
+     * Authenticate by username/password. Legacy plaintext demo passwords are upgraded after a successful login.
      */
-    public User login(String username, String passwordHash) {
+    public User login(String username, String password) {
         String sql = "SELECT " + USER_COLUMNS + " "
-                + "FROM dbo.Users WHERE Username = ? AND PasswordHash = ? AND Status = N'ACTIVE'";
+                + "FROM dbo.Users WHERE Username = ? AND Status = N'ACTIVE'";
         try (Connection conn = DBContext.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, username);
-            ps.setString(2, passwordHash);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    return mapUser(rs);
+                    User user = mapUser(rs);
+                    if (!user.isEmailVerified()) {
+                        return null;
+                    }
+                    if (PasswordHasher.verify(password, user.getPasswordHash())) {
+                        return user;
+                    }
+                    if (PasswordHasher.legacyPlainTextMatches(password, user.getPasswordHash())) {
+                        String upgradedHash = PasswordHasher.hash(password);
+                        updatePasswordHash(conn, user.getUserId(), upgradedHash);
+                        user.setPasswordHash(upgradedHash);
+                        return user;
+                    }
                 }
             }
         } catch (SQLException e) {
@@ -45,8 +59,9 @@ public class UserDAO {
      * Uses transaction to ensure atomicity.
      */
     public boolean registerCustomer(User user) {
-        String insertUser = "INSERT INTO dbo.Users (Username, Email, PasswordHash, FullName, Phone, Address, IdentityNumber) "
-                + "VALUES (?, ?, ?, ?, ?, ?, ?)";
+        String insertUser = "INSERT INTO dbo.Users "
+                + "(Username, Email, PasswordHash, FullName, Phone, Address, IdentityNumber, EmailVerified, EmailVerifiedAt) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?, 1, SYSUTCDATETIME())";
         String assignRole = "INSERT INTO dbo.User_Roles (UserID, RoleID) "
                 + "SELECT ?, RoleID FROM dbo.Roles WHERE RoleName = N'CUSTOMER'";
         String insertCustomer = "INSERT INTO dbo.Customers (UserID) VALUES (?)";
@@ -58,7 +73,7 @@ public class UserDAO {
                 try (PreparedStatement ps = conn.prepareStatement(insertUser, Statement.RETURN_GENERATED_KEYS)) {
                     ps.setString(1, user.getUsername());
                     ps.setString(2, user.getEmail());
-                    ps.setString(3, user.getPasswordHash());
+                    ps.setString(3, hashIfNeeded(user.getPasswordHash()));
                     ps.setString(4, user.getFullName());
                     ps.setString(5, user.getPhone());
                     ps.setString(6, user.getAddress());
@@ -298,8 +313,9 @@ public class UserDAO {
      * Create a new user with specified roles (for admin).
      */
     public boolean createUser(User user, List<String> roleNames) {
-        String insertUser = "INSERT INTO dbo.Users (Username, Email, PasswordHash, FullName, Phone, Address, IdentityNumber, Status) "
-                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        String insertUser = "INSERT INTO dbo.Users "
+                + "(Username, Email, PasswordHash, FullName, Phone, Address, IdentityNumber, Status, EmailVerified, EmailVerifiedAt) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, SYSUTCDATETIME())";
         String assignRole = "INSERT INTO dbo.User_Roles (UserID, RoleID) "
                 + "SELECT ?, RoleID FROM dbo.Roles WHERE RoleName = ?";
 
@@ -310,7 +326,7 @@ public class UserDAO {
                 try (PreparedStatement ps = conn.prepareStatement(insertUser, Statement.RETURN_GENERATED_KEYS)) {
                     ps.setString(1, user.getUsername());
                     ps.setString(2, user.getEmail());
-                    ps.setString(3, user.getPasswordHash());
+                    ps.setString(3, hashIfNeeded(user.getPasswordHash()));
                     ps.setString(4, user.getFullName());
                     ps.setString(5, user.getPhone());
                     ps.setString(6, user.getAddress());
@@ -387,6 +403,15 @@ public class UserDAO {
             ps.setString(1, status);
             ps.setInt(2, userId);
             return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    public boolean updatePasswordHash(int userId, String passwordHash) {
+        try (Connection conn = DBContext.getConnection()) {
+            return updatePasswordHash(conn, userId, passwordHash);
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -478,7 +503,7 @@ public class UserDAO {
         return false;
     }
 
-    private User mapUser(ResultSet rs) throws SQLException {
+    static User mapUserRow(ResultSet rs) throws SQLException {
         User u = new User();
         u.setUserId(rs.getInt("UserID"));
         u.setUsername(rs.getString("Username"));
@@ -493,6 +518,13 @@ public class UserDAO {
         u.setBankName(readNullable(rs, "BankName"));
         u.setBankAccountNumber(readNullable(rs, "BankAccountNumber"));
         u.setBankAccountHolder(readNullable(rs, "BankAccountHolder"));
+        u.setEmailVerified(readBoolean(rs, "EmailVerified", true));
+        u.setAuthProvider(readNullable(rs, "AuthProvider"));
+        u.setAuthProviderSubject(readNullable(rs, "AuthProviderSubject"));
+        try {
+            Timestamp ts = rs.getTimestamp("EmailVerifiedAt");
+            if (ts != null) u.setEmailVerifiedAt(ts.toLocalDateTime());
+        } catch (SQLException ignored) {}
         try {
             Timestamp ts = rs.getTimestamp("CreatedAt");
             if (ts != null) u.setCreatedAt(ts.toLocalDateTime());
@@ -500,12 +532,41 @@ public class UserDAO {
         return u;
     }
 
-    private String readNullable(ResultSet rs, String column) {
+    private User mapUser(ResultSet rs) throws SQLException {
+        return mapUserRow(rs);
+    }
+
+    private static String readNullable(ResultSet rs, String column) {
         try {
             return rs.getString(column);
         } catch (SQLException ignored) {
             return null;
         }
+    }
+
+    private static boolean readBoolean(ResultSet rs, String column, boolean defaultValue) {
+        try {
+            boolean value = rs.getBoolean(column);
+            return rs.wasNull() ? defaultValue : value;
+        } catch (SQLException ignored) {
+            return defaultValue;
+        }
+    }
+
+    private boolean updatePasswordHash(Connection conn, int userId, String passwordHash) throws SQLException {
+        try (PreparedStatement ps = conn.prepareStatement(
+                "UPDATE dbo.Users SET PasswordHash = ?, UpdatedAt = SYSUTCDATETIME() WHERE UserID = ?")) {
+            ps.setString(1, passwordHash);
+            ps.setInt(2, userId);
+            return ps.executeUpdate() > 0;
+        }
+    }
+
+    private String hashIfNeeded(String value) {
+        if (PasswordHasher.isHashed(value)) {
+            return value;
+        }
+        return PasswordHasher.hash(value == null ? "" : value);
     }
 
     private String normalize(String value) {

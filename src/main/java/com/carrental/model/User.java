@@ -20,6 +20,10 @@ public class User {
     private String bankName;
     private String bankAccountNumber;
     private String bankAccountHolder;
+    private boolean emailVerified = true;
+    private LocalDateTime emailVerifiedAt;
+    private String authProvider;
+    private String authProviderSubject;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -90,6 +94,19 @@ public class User {
     public boolean getBankInfoLocked() {
         return isBankInfoLocked();
     }
+
+    public boolean isEmailVerified() { return emailVerified; }
+    public boolean getEmailVerified() { return emailVerified; }
+    public void setEmailVerified(boolean emailVerified) { this.emailVerified = emailVerified; }
+
+    public LocalDateTime getEmailVerifiedAt() { return emailVerifiedAt; }
+    public void setEmailVerifiedAt(LocalDateTime emailVerifiedAt) { this.emailVerifiedAt = emailVerifiedAt; }
+
+    public String getAuthProvider() { return authProvider; }
+    public void setAuthProvider(String authProvider) { this.authProvider = normalize(authProvider); }
+
+    public String getAuthProviderSubject() { return authProviderSubject; }
+    public void setAuthProviderSubject(String authProviderSubject) { this.authProviderSubject = normalize(authProviderSubject); }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

@@ -174,7 +174,62 @@ driver01/driver123
 customer01/cust123
 ```
 
-### 6. Cau hinh thanh toan PayOS neu can test QR that
+Mat khau demo dang o dinh dang legacy trong file SQL. Lan dang nhap thanh cong dau tien se tu dong nang cap sang hash PBKDF2 trong database.
+
+### 6. Cau hinh email/OAuth neu can test dang ky va reset password
+
+Tao file local, khong commit:
+
+```text
+config/auth-local.properties
+```
+
+Co the copy tu:
+
+```text
+config/auth-local.example.properties
+```
+
+Toi thieu de test local khong can gui mail that:
+
+```properties
+APP_BASE_URL=http://localhost:9999/CarRentalSystem
+AUTH_DEV_MODE=true
+```
+
+Khi `AUTH_DEV_MODE=true`, ma xac minh email/reset password se hien tren man hinh va log server. Khi dung that, cau hinh SMTP va tat dev mode:
+
+```properties
+AUTH_DEV_MODE=false
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USERNAME=your_email@gmail.com
+SMTP_PASSWORD=your_email_app_password
+SMTP_FROM=your_email@gmail.com
+SMTP_STARTTLS=true
+SMTP_SSL=false
+```
+
+Google/Facebook login chi hien nut khi da cau hinh client id/secret:
+
+```properties
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+FACEBOOK_CLIENT_ID=your_facebook_app_id
+FACEBOOK_CLIENT_SECRET=your_facebook_app_secret
+FACEBOOK_GRAPH_VERSION=v25.0
+```
+
+Callback URL can khai bao tren provider:
+
+```text
+http://localhost:9999/CarRentalSystem/oauth/google/callback
+http://localhost:9999/CarRentalSystem/oauth/facebook/callback
+```
+
+Neu dung ngrok, doi `APP_BASE_URL` sang domain ngrok va cap nhat callback URL tuong ung.
+
+### 7. Cau hinh thanh toan PayOS neu can test QR that
 
 Tao file local, khong commit:
 
@@ -231,6 +286,7 @@ He thong phuc vu quy trinh cho thue xe:
 ```text
 CarRentalSystem/
 +-- config/
+|   +-- auth-local.example.properties
 |   +-- database-local.example.properties
 +-- docs/
 |   +-- CarRentalSystem_Functional_Requirements.docx
@@ -640,6 +696,7 @@ sql/setup-database.sql
 ```
 
 File nay tao schema moi nhat, tai khoan demo, xe demo, xe PayOS test va anh online.
+Schema nay da bao gom hash password, bang pending email verification, bang reset password va OAuth provider mapping.
 
 Neu database cu da ton tai va can nang cap len schema moi:
 
@@ -662,6 +719,25 @@ Script ho tro kiem tra:
 ```text
 sql/check-database.sql
 ```
+
+Neu vua pull code moi tren database cu, chay `sql/upgrade-existing-database.sql` de them cac cot/bang auth moi truoc khi dang nhap.
+
+## Cau hinh dang nhap, xac minh email va reset password
+
+Project ho tro:
+
+- Hash mat khau bang PBKDF2. Tai khoan legacy/demo tu nang cap hash sau lan login thanh cong dau tien.
+- Dang ky 2 buoc: gui ma 6 so toi email, chi tao user that sau khi nhap dung ma.
+- Reset password bang ma 6 so gui qua email.
+- Dang nhap Google/Facebook bang OAuth 2.0 khi da co client id/secret.
+
+File cau hinh local:
+
+```text
+config/auth-local.properties
+```
+
+File nay bi ignore va khong nen commit vi co the chua SMTP password, Google client secret, Facebook app secret.
 
 ## Cau hinh PayOS
 
@@ -966,7 +1042,9 @@ Khong commit cac file/chia se thong tin sau:
 
 - `config/database-local.properties`,
 - `config/payment-local.properties`,
+- `config/auth-local.properties`,
 - PayOS client id/api key/checksum key that,
+- SMTP password, Google client secret, Facebook app secret,
 - ngrok authtoken,
 - file exe/zip/log trong `tools/ngrok`,
 - password database production.

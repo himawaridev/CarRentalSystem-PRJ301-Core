@@ -13,11 +13,36 @@
         <c:if test="${not empty error}">
             <div class="alert alert-custom-error"><i class="bi bi-exclamation-circle me-1"></i>${error}</div>
         </c:if>
+        <c:if test="${not empty success}">
+            <div class="alert alert-custom-success"><i class="bi bi-check-circle me-1"></i>${success}</div>
+        </c:if>
         <c:if test="${param.error == 'auth'}">
             <div class="alert alert-custom-error"><i class="bi bi-lock me-1"></i>Vui long dang nhap de tiep tuc!</div>
         </c:if>
         <c:if test="${param.success == 'registered'}">
             <div class="alert alert-custom-success"><i class="bi bi-check-circle me-1"></i>Dang ky thanh cong! Hay dang nhap.</div>
+        </c:if>
+        <c:if test="${param.success == 'verified'}">
+            <div class="alert alert-custom-success"><i class="bi bi-check-circle me-1"></i>Email da duoc xac minh. Hay dang nhap.</div>
+        </c:if>
+        <c:if test="${param.success == 'reset'}">
+            <div class="alert alert-custom-success"><i class="bi bi-check-circle me-1"></i>Mat khau da duoc cap nhat. Hay dang nhap lai.</div>
+        </c:if>
+
+        <c:if test="${googleLoginEnabled or facebookLoginEnabled}">
+            <div class="oauth-grid mb-3">
+                <c:if test="${googleLoginEnabled}">
+                    <a class="btn btn-oauth" href="${pageContext.request.contextPath}/oauth/google">
+                        <i class="bi bi-google"></i>Google
+                    </a>
+                </c:if>
+                <c:if test="${facebookLoginEnabled}">
+                    <a class="btn btn-oauth" href="${pageContext.request.contextPath}/oauth/facebook">
+                        <i class="bi bi-facebook"></i>Facebook
+                    </a>
+                </c:if>
+            </div>
+            <div class="auth-divider"><span>hoac</span></div>
         </c:if>
 
         <form method="post" action="${pageContext.request.contextPath}/login">
@@ -28,6 +53,9 @@
             <div class="mb-3">
                 <label class="form-label">Mat khau</label>
                 <input type="password" name="password" class="form-control" placeholder="Nhap password..." required>
+                <div class="text-end mt-1">
+                    <a href="${pageContext.request.contextPath}/forgot-password" class="small text-accent">Quen mat khau?</a>
+                </div>
             </div>
             <c:if test="${not empty param.redirect}">
                 <input type="hidden" name="redirect" value="${param.redirect}">

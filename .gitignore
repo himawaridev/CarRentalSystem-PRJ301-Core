@@ -32,8 +32,10 @@ tools/ngrok/
 # Local secrets
 config/payment-local.properties
 config/database-local.properties
+config/auth-local.properties
 src/main/resources/payment-local.properties
 src/main/resources/database-local.properties
+src/main/resources/auth-local.properties
 
 # Test utility (not needed in repo)
 src/main/java/com/carrental/config/TestDB.java

@@ -1,14 +1,26 @@
 package com.carrental.controller;
 
+import com.carrental.dao.AuthDAO;
 import com.carrental.dao.UserDAO;
-import com.carrental.model.User;
+import com.carrental.service.AuthConfig;
+import com.carrental.service.EmailService;
+import com.carrental.service.PasswordHasher;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
-import jakarta.servlet.http.*;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 
 @WebServlet("/register")
 public class RegisterServlet extends HttpServlet {
+    private static final int MIN_PASSWORD_LENGTH = 8;
+    private static final int CODE_TTL_MINUTES = 15;
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -19,39 +31,81 @@ public class RegisterServlet extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        String username = request.getParameter("username");
-        String email = request.getParameter("email");
+        String username = normalize(request.getParameter("username"));
+        String email = normalizeEmail(request.getParameter("email"));
         String password = request.getParameter("password");
-        String fullName = request.getParameter("fullName");
-        String phone = request.getParameter("phone");
-        String address = request.getParameter("address");
+        String fullName = normalize(request.getParameter("fullName"));
+        String phone = normalize(request.getParameter("phone"));
+        String address = normalize(request.getParameter("address"));
 
-        UserDAO dao = new UserDAO();
-
-        if (dao.usernameExists(username)) {
-            request.setAttribute("error", "Tên đăng nhập đã tồn tại!");
-            request.getRequestDispatcher("/WEB-INF/views/register.jsp").forward(request, response);
+        UserDAO userDAO = new UserDAO();
+        if (isBlank(username) || isBlank(email) || isBlank(password) || isBlank(fullName)) {
+            forwardWithError(request, response, "Vui long nhap day du thong tin bat buoc.");
             return;
         }
-        if (dao.emailExists(email)) {
-            request.setAttribute("error", "Email đã được sử dụng!");
-            request.getRequestDispatcher("/WEB-INF/views/register.jsp").forward(request, response);
+        if (password.length() < MIN_PASSWORD_LENGTH) {
+            forwardWithError(request, response, "Mat khau can co it nhat 8 ky tu.");
+            return;
+        }
+        if (userDAO.usernameExists(username)) {
+            forwardWithError(request, response, "Ten dang nhap da ton tai.");
+            return;
+        }
+        if (userDAO.emailExists(email)) {
+            forwardWithError(request, response, "Email da duoc su dung.");
             return;
         }
 
-        User user = new User();
-        user.setUsername(username);
-        user.setEmail(email);
-        user.setPasswordHash(password); // Plain text for now per docs
-        user.setFullName(fullName);
-        user.setPhone(phone);
-        user.setAddress(address);
-
-        if (dao.registerCustomer(user)) {
-            response.sendRedirect(request.getContextPath() + "/login?success=registered");
-        } else {
-            request.setAttribute("error", "Đăng ký thất bại, vui lòng thử lại!");
-            request.getRequestDispatcher("/WEB-INF/views/register.jsp").forward(request, response);
+        String code = PasswordHasher.randomNumericCode();
+        AuthDAO authDAO = new AuthDAO();
+        boolean saved = authDAO.savePendingRegistration(
+                username,
+                email,
+                PasswordHasher.hash(password),
+                fullName,
+                phone,
+                address,
+                PasswordHasher.hash(code),
+                LocalDateTime.now(ZoneOffset.UTC).plusMinutes(CODE_TTL_MINUTES));
+        if (!saved) {
+            forwardWithError(request, response, "Khong the tao yeu cau xac minh. Vui long thu lai.");
+            return;
         }
+
+        AuthConfig config = new AuthConfig();
+        boolean sent = new EmailService(config).sendVerificationCode(email, fullName, code);
+        if (!sent && !config.devMode()) {
+            forwardWithError(request, response,
+                    "Chua cau hinh SMTP nen khong gui duoc ma xac minh email.");
+            return;
+        }
+
+        HttpSession session = request.getSession();
+        session.setAttribute("flashSuccess",
+                "Da gui ma xac minh toi email. Vui long nhap ma de hoan tat dang ky.");
+        if (config.devMode()) {
+            session.setAttribute("devVerificationCode", code);
+        }
+        response.sendRedirect(request.getContextPath() + "/verify-email?email="
+                + URLEncoder.encode(email, StandardCharsets.UTF_8));
+    }
+
+    private void forwardWithError(HttpServletRequest request, HttpServletResponse response, String error)
+            throws ServletException, IOException {
+        request.setAttribute("error", error);
+        request.getRequestDispatcher("/WEB-INF/views/register.jsp").forward(request, response);
+    }
+
+    private String normalize(String value) {
+        return value == null ? null : value.trim().replaceAll("\\s+", " ");
+    }
+
+    private String normalizeEmail(String value) {
+        String normalized = normalize(value);
+        return normalized == null ? null : normalized.toLowerCase(java.util.Locale.ROOT);
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 }

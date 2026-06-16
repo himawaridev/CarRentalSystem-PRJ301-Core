@@ -527,3 +527,120 @@ BEGIN
     ON dbo.Support_Tickets(UserID, CreatedAt DESC);
 END
 GO
+
+
+/* ============================================================
+   5. Authentication security: email verification, reset codes, OAuth
+   ============================================================ */
+
+USE CarRentalDB;
+GO
+
+SET QUOTED_IDENTIFIER ON;
+GO
+
+IF COL_LENGTH(N'dbo.Users', N'EmailVerified') IS NULL
+    ALTER TABLE dbo.Users ADD EmailVerified BIT NOT NULL
+        CONSTRAINT DF_Users_EmailVerified DEFAULT 1;
+GO
+
+IF COL_LENGTH(N'dbo.Users', N'EmailVerifiedAt') IS NULL
+    ALTER TABLE dbo.Users ADD EmailVerifiedAt DATETIME2(0) NULL;
+GO
+
+IF COL_LENGTH(N'dbo.Users', N'AuthProvider') IS NULL
+    ALTER TABLE dbo.Users ADD AuthProvider NVARCHAR(30) NULL;
+GO
+
+IF COL_LENGTH(N'dbo.Users', N'AuthProviderSubject') IS NULL
+    ALTER TABLE dbo.Users ADD AuthProviderSubject NVARCHAR(120) NULL;
+GO
+
+UPDATE dbo.Users
+SET EmailVerified = 1,
+    EmailVerifiedAt = COALESCE(EmailVerifiedAt, CreatedAt, SYSUTCDATETIME())
+WHERE EmailVerified = 1
+  AND EmailVerifiedAt IS NULL;
+GO
+
+IF NOT EXISTS (
+    SELECT 1 FROM sys.indexes
+    WHERE name = N'UX_Users_AuthProviderSubject_NotNull'
+      AND object_id = OBJECT_ID(N'dbo.Users')
+)
+BEGIN
+    CREATE UNIQUE INDEX UX_Users_AuthProviderSubject_NotNull
+    ON dbo.Users(AuthProvider, AuthProviderSubject)
+    WHERE AuthProvider IS NOT NULL AND AuthProviderSubject IS NOT NULL;
+END
+GO
+
+IF OBJECT_ID(N'dbo.Pending_Registrations', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.Pending_Registrations (
+        PendingRegistrationID BIGINT IDENTITY(1,1) PRIMARY KEY,
+        Username NVARCHAR(50) NOT NULL,
+        Email NVARCHAR(255) NOT NULL,
+        PasswordHash NVARCHAR(255) NOT NULL,
+        FullName NVARCHAR(120) NOT NULL,
+        Phone NVARCHAR(30) NULL,
+        Address NVARCHAR(255) NULL,
+        VerificationCodeHash NVARCHAR(255) NOT NULL,
+        ExpiresAt DATETIME2(0) NOT NULL,
+        Attempts INT NOT NULL DEFAULT 0,
+        CreatedAt DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
+        UpdatedAt DATETIME2(0) NULL,
+        CONSTRAINT CK_PendingRegistrations_Attempts CHECK (Attempts >= 0)
+    );
+END
+GO
+
+IF NOT EXISTS (
+    SELECT 1 FROM sys.indexes
+    WHERE name = N'UX_PendingRegistrations_Username'
+      AND object_id = OBJECT_ID(N'dbo.Pending_Registrations')
+)
+BEGIN
+    CREATE UNIQUE INDEX UX_PendingRegistrations_Username
+    ON dbo.Pending_Registrations(Username);
+END
+GO
+
+IF NOT EXISTS (
+    SELECT 1 FROM sys.indexes
+    WHERE name = N'UX_PendingRegistrations_Email'
+      AND object_id = OBJECT_ID(N'dbo.Pending_Registrations')
+)
+BEGIN
+    CREATE UNIQUE INDEX UX_PendingRegistrations_Email
+    ON dbo.Pending_Registrations(Email);
+END
+GO
+
+IF OBJECT_ID(N'dbo.Password_Reset_Codes', N'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.Password_Reset_Codes (
+        PasswordResetID BIGINT IDENTITY(1,1) PRIMARY KEY,
+        UserID INT NOT NULL,
+        CodeHash NVARCHAR(255) NOT NULL,
+        ExpiresAt DATETIME2(0) NOT NULL,
+        Attempts INT NOT NULL DEFAULT 0,
+        ConsumedAt DATETIME2(0) NULL,
+        CreatedAt DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
+        CONSTRAINT FK_PasswordResetCodes_Users FOREIGN KEY (UserID)
+            REFERENCES dbo.Users(UserID),
+        CONSTRAINT CK_PasswordResetCodes_Attempts CHECK (Attempts >= 0)
+    );
+END
+GO
+
+IF NOT EXISTS (
+    SELECT 1 FROM sys.indexes
+    WHERE name = N'IX_PasswordResetCodes_User_Active'
+      AND object_id = OBJECT_ID(N'dbo.Password_Reset_Codes')
+)
+BEGIN
+    CREATE INDEX IX_PasswordResetCodes_User_Active
+    ON dbo.Password_Reset_Codes(UserID, ConsumedAt, CreatedAt DESC);
+END
+GO

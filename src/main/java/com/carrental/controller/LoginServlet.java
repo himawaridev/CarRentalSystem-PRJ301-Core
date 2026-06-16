@@ -2,11 +2,14 @@ package com.carrental.controller;
 
 import com.carrental.dao.UserDAO;
 import com.carrental.model.User;
+import com.carrental.service.AuthConfig;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
-import jakarta.servlet.http.*;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
-import java.util.List;
 
 @WebServlet("/login")
 public class LoginServlet extends HttpServlet {
@@ -14,12 +17,13 @@ public class LoginServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        // If already logged in, redirect
         HttpSession session = request.getSession(false);
         if (session != null && session.getAttribute("loggedInUser") != null) {
             response.sendRedirect(request.getContextPath() + "/search");
             return;
         }
+        attachAuthConfig(request);
+        attachFlash(request);
         request.getRequestDispatcher("/WEB-INF/views/login.jsp").forward(request, response);
     }
 
@@ -33,35 +37,35 @@ public class LoginServlet extends HttpServlet {
         User user = userDAO.login(username, password);
 
         if (user == null) {
-            request.setAttribute("error", "Sai tên đăng nhập hoặc mật khẩu!");
+            attachAuthConfig(request);
+            request.setAttribute("error", "Sai ten dang nhap hoac mat khau.");
             request.getRequestDispatcher("/WEB-INF/views/login.jsp").forward(request, response);
             return;
         }
 
-        HttpSession session = request.getSession();
-        session.setAttribute("loggedInUser", user);
+        AuthSessionHelper.signIn(request, response, user, request.getParameter("redirect"));
+    }
 
-        List<String> roles = userDAO.getUserRoles(user.getUserId());
-        session.setAttribute("userRoles", roles);
+    private void attachAuthConfig(HttpServletRequest request) {
+        AuthConfig config = new AuthConfig();
+        request.setAttribute("googleLoginEnabled", config.googleConfigured());
+        request.setAttribute("facebookLoginEnabled", config.facebookConfigured());
+    }
 
-        // Check redirect parameter
-        String redirect = request.getParameter("redirect");
-        if (redirect != null && !redirect.isEmpty() && redirect.startsWith("/")) {
-            response.sendRedirect(redirect);
+    private void attachFlash(HttpServletRequest request) {
+        HttpSession session = request.getSession(false);
+        if (session == null) {
             return;
         }
-
-        // Role-based routing
-        if (roles.contains("ADMIN")) {
-            response.sendRedirect(request.getContextPath() + "/admin/dashboard");
-        } else if (roles.contains("MANAGER")) {
-            response.sendRedirect(request.getContextPath() + "/manager/dashboard");
-        } else if (roles.contains("STAFF")) {
-            response.sendRedirect(request.getContextPath() + "/staff/dashboard");
-        } else if (roles.contains("DRIVER")) {
-            response.sendRedirect(request.getContextPath() + "/driver/schedule");
-        } else {
-            response.sendRedirect(request.getContextPath() + "/search");
+        String success = (String) session.getAttribute("flashSuccess");
+        if (success != null) {
+            request.setAttribute("success", success);
+            session.removeAttribute("flashSuccess");
+        }
+        String error = (String) session.getAttribute("flashError");
+        if (error != null) {
+            request.setAttribute("error", error);
+            session.removeAttribute("flashError");
         }
     }
 }

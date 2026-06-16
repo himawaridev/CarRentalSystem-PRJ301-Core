@@ -56,6 +56,20 @@ SELECT
          ELSE N'OK'
     END AS RefundsTable;
 
+SELECT
+    CASE WHEN COL_LENGTH(N'dbo.Users', N'EmailVerified') IS NULL
+         THEN N'MISSING'
+         ELSE N'OK'
+    END AS UsersEmailVerifiedColumn,
+    CASE WHEN OBJECT_ID(N'dbo.Pending_Registrations', N'U') IS NULL
+         THEN N'MISSING'
+         ELSE N'OK'
+    END AS PendingRegistrationsTable,
+    CASE WHEN OBJECT_ID(N'dbo.Password_Reset_Codes', N'U') IS NULL
+         THEN N'MISSING'
+         ELSE N'OK'
+    END AS PasswordResetCodesTable;
+
 SELECT TOP 20 Status, COUNT(*) AS Total
 FROM dbo.Contracts
 GROUP BY Status

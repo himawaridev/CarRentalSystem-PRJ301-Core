@@ -45,6 +45,10 @@ CREATE TABLE dbo.Users (
     BankAccountNumber NVARCHAR(30) NULL,
     BankAccountHolder NVARCHAR(120) NULL,
     DateOfBirth DATE NULL,
+    EmailVerified BIT NOT NULL DEFAULT 1,
+    EmailVerifiedAt DATETIME2(0) NULL,
+    AuthProvider NVARCHAR(30) NULL,
+    AuthProviderSubject NVARCHAR(120) NULL,
     Status NVARCHAR(20) NOT NULL DEFAULT N'ACTIVE',
     CreatedAt DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
     UpdatedAt DATETIME2(0) NULL,
@@ -60,6 +64,48 @@ WHERE Phone IS NOT NULL;
 CREATE INDEX IX_Users_BankAccountNumber_NotNull
 ON dbo.Users(BankAccountNumber)
 WHERE BankAccountNumber IS NOT NULL;
+
+CREATE UNIQUE INDEX UX_Users_AuthProviderSubject_NotNull
+ON dbo.Users(AuthProvider, AuthProviderSubject)
+WHERE AuthProvider IS NOT NULL AND AuthProviderSubject IS NOT NULL;
+
+CREATE TABLE dbo.Pending_Registrations (
+    PendingRegistrationID BIGINT IDENTITY(1,1) PRIMARY KEY,
+    Username NVARCHAR(50) NOT NULL,
+    Email NVARCHAR(255) NOT NULL,
+    PasswordHash NVARCHAR(255) NOT NULL,
+    FullName NVARCHAR(120) NOT NULL,
+    Phone NVARCHAR(30) NULL,
+    Address NVARCHAR(255) NULL,
+    VerificationCodeHash NVARCHAR(255) NOT NULL,
+    ExpiresAt DATETIME2(0) NOT NULL,
+    Attempts INT NOT NULL DEFAULT 0,
+    CreatedAt DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
+    UpdatedAt DATETIME2(0) NULL,
+    CONSTRAINT CK_PendingRegistrations_Attempts CHECK (Attempts >= 0)
+);
+
+CREATE UNIQUE INDEX UX_PendingRegistrations_Username
+ON dbo.Pending_Registrations(Username);
+
+CREATE UNIQUE INDEX UX_PendingRegistrations_Email
+ON dbo.Pending_Registrations(Email);
+
+CREATE TABLE dbo.Password_Reset_Codes (
+    PasswordResetID BIGINT IDENTITY(1,1) PRIMARY KEY,
+    UserID INT NOT NULL,
+    CodeHash NVARCHAR(255) NOT NULL,
+    ExpiresAt DATETIME2(0) NOT NULL,
+    Attempts INT NOT NULL DEFAULT 0,
+    ConsumedAt DATETIME2(0) NULL,
+    CreatedAt DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
+    CONSTRAINT FK_PasswordResetCodes_Users FOREIGN KEY (UserID)
+        REFERENCES dbo.Users(UserID),
+    CONSTRAINT CK_PasswordResetCodes_Attempts CHECK (Attempts >= 0)
+);
+
+CREATE INDEX IX_PasswordResetCodes_User_Active
+ON dbo.Password_Reset_Codes(UserID, ConsumedAt, CreatedAt DESC);
 
 CREATE TABLE dbo.User_Roles (
     UserID INT NOT NULL,
@@ -749,7 +795,7 @@ IF NOT EXISTS (SELECT 1 FROM dbo.Car_Types WHERE SeatCount = 7)
     VALUES (N'7 seats', 7, N'Xe 7 cho');
 GO
 
--- Demo users. Passwords are plaintext because the current LoginServlet compares directly with PasswordHash.
+-- Demo users. Legacy plaintext demo passwords are accepted once and auto-upgraded to PBKDF2 on login.
 IF NOT EXISTS (SELECT 1 FROM dbo.Users WHERE Username = N'admin')
     INSERT INTO dbo.Users (Username, Email, PasswordHash, FullName, Phone, Address, IdentityNumber)
     VALUES (N'admin', N'admin@carrental.vn', N'admin123', N'System Admin', N'0900000001', N'Ha Noi', N'ADMIN-DEMO');
