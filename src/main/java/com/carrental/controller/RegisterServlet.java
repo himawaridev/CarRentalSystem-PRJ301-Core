@@ -25,6 +25,7 @@ public class RegisterServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+        attachFlash(request);
         request.getRequestDispatcher("/WEB-INF/views/register.jsp").forward(request, response);
     }
 
@@ -94,6 +95,23 @@ public class RegisterServlet extends HttpServlet {
             throws ServletException, IOException {
         request.setAttribute("error", error);
         request.getRequestDispatcher("/WEB-INF/views/register.jsp").forward(request, response);
+    }
+
+    private void attachFlash(HttpServletRequest request) {
+        HttpSession session = request.getSession(false);
+        if (session == null) {
+            return;
+        }
+        String error = (String) session.getAttribute("flashError");
+        if (error != null) {
+            request.setAttribute("error", error);
+            session.removeAttribute("flashError");
+        }
+        String success = (String) session.getAttribute("flashSuccess");
+        if (success != null) {
+            request.setAttribute("success", success);
+            session.removeAttribute("flashSuccess");
+        }
     }
 
     private String normalize(String value) {

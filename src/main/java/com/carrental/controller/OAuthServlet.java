@@ -42,8 +42,9 @@ public class OAuthServlet extends HttpServlet {
         OAuthService oauth = new OAuthService();
         if (!oauth.isConfigured(provider)) {
             request.getSession().setAttribute("flashError",
-                    "Chua cau hinh dang nhap " + provider + ".");
-            response.sendRedirect(request.getContextPath() + "/login");
+                    "Chua cau hinh dang nhap " + providerLabel(provider)
+                    + ". Hay dien client id/client secret trong config/auth-local.properties.");
+            response.sendRedirect(request.getContextPath() + redirectForEntry(request.getParameter("entry")));
             return;
         }
         String state = PasswordHasher.randomUrlToken();
@@ -102,5 +103,15 @@ public class OAuthServlet extends HttpServlet {
             return OAuthService.FACEBOOK;
         }
         return null;
+    }
+
+    private String redirectForEntry(String entry) {
+        return "register".equals(entry) ? "/register" : "/login";
+    }
+
+    private String providerLabel(String provider) {
+        return OAuthService.GOOGLE.equals(provider) ? "Google"
+                : OAuthService.FACEBOOK.equals(provider) ? "Facebook"
+                : provider;
     }
 }
