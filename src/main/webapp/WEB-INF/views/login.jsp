@@ -29,21 +29,15 @@
             <div class="alert alert-custom-success"><i class="bi bi-check-circle me-1"></i>Mat khau da duoc cap nhat. Hay dang nhap lai.</div>
         </c:if>
 
-        <c:if test="${googleLoginEnabled or facebookLoginEnabled}">
-            <div class="oauth-grid mb-3">
-                <c:if test="${googleLoginEnabled}">
-                    <a class="btn btn-oauth" href="${pageContext.request.contextPath}/oauth/google">
-                        <i class="bi bi-google"></i>Google
-                    </a>
-                </c:if>
-                <c:if test="${facebookLoginEnabled}">
-                    <a class="btn btn-oauth" href="${pageContext.request.contextPath}/oauth/facebook">
-                        <i class="bi bi-facebook"></i>Facebook
-                    </a>
-                </c:if>
-            </div>
-            <div class="auth-divider"><span>hoac</span></div>
-        </c:if>
+        <div class="oauth-grid mb-3">
+            <a class="btn btn-oauth" href="${pageContext.request.contextPath}/oauth/google?entry=login">
+                <i class="bi bi-google"></i>Google
+            </a>
+            <a class="btn btn-oauth" href="${pageContext.request.contextPath}/oauth/facebook?entry=login">
+                <i class="bi bi-facebook"></i>Facebook
+            </a>
+        </div>
+        <div class="auth-divider"><span>hoac</span></div>
 
         <form method="post" action="${pageContext.request.contextPath}/login">
             <div class="mb-3">

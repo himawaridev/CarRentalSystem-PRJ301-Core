@@ -13,9 +13,22 @@
         <c:if test="${not empty error}">
             <div class="alert alert-custom-error"><i class="bi bi-exclamation-circle me-1"></i>${error}</div>
         </c:if>
+        <c:if test="${not empty success}">
+            <div class="alert alert-custom-success"><i class="bi bi-check-circle me-1"></i>${success}</div>
+        </c:if>
         <div class="alert alert-custom-info mb-3">
             <i class="bi bi-envelope-check me-1"></i>Sau khi dang ky, he thong se gui ma xac minh toi email cua ban.
         </div>
+
+        <div class="oauth-grid mb-3">
+            <a class="btn btn-oauth" href="${pageContext.request.contextPath}/oauth/google?entry=register">
+                <i class="bi bi-google"></i>Dang ky bang Google
+            </a>
+            <a class="btn btn-oauth" href="${pageContext.request.contextPath}/oauth/facebook?entry=register">
+                <i class="bi bi-facebook"></i>Facebook
+            </a>
+        </div>
+        <div class="auth-divider"><span>hoac nhap thong tin</span></div>
 
         <form method="post" action="${pageContext.request.contextPath}/register">
             <div class="row">
