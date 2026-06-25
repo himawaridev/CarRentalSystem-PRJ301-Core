@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: car-rental-system
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /CarRentalSystem/health
+    autoDeploy: true
+    envVars:
+      - key: APP_BASE_URL
+        sync: false
+      - key: DB_URL
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: AUTH_DEV_MODE
+        value: "false"

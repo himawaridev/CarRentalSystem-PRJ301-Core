@@ -20,6 +20,7 @@ bo sung tinh nang.
 - Huong dan clone va chay nhanh
 - Cau hinh database
 - Cau hinh PayOS va ngrok
+- Deploy mien phi tren Render
 - Cach chay du an
 - Tai khoan mau
 - Cac script SQL quan trong
@@ -248,6 +249,110 @@ APP_BASE_URL=http://localhost:9999/CarRentalSystem
 
 Neu khong cau hinh PayOS, cac trang public, dang nhap, quan ly xe, tim xe van chay;
 phan tao QR thanh toan that se bao thieu cau hinh.
+
+## Deploy mien phi tren Render
+
+Project da co san `Dockerfile`, `.dockerignore` va `render.yaml` de deploy len Render
+bang Docker/Tomcat 10.1. Ung dung van can mot SQL Server public; de dung free, nen tao
+Azure SQL Database Free, sau do cho Render ket noi den database do.
+
+Luu y ve Render Free:
+
+- Web Service free co the sleep sau mot khoang thoi gian khong co request.
+- Khong nen dung cron/ping lien tuc chi de tranh sleep, vi do la cach lach gioi han free tier.
+- De demo, chap nhan cold start khi mo lai app. Neu can webhook PayOS on dinh/luon online,
+  nen nang Render paid hoac chuyen sang VPS.
+
+### 1. Tao database cloud
+
+Tao Azure SQL Database Free, sau do tao user/password rieng cho app. Khi chay file SQL tren
+Azure SQL, hay ket noi truc tiep vao database da tao. Neu editor bao loi o cac dong
+`CREATE DATABASE CarRentalDB` hoac `USE CarRentalDB`, bo qua/loai cac dong do vi Azure SQL
+khong cho doi database bang `USE` trong cung mot ket noi.
+
+Neu dung Render Free ket noi toi Azure SQL, can cau hinh firewall/public network access
+cho database. Render Free khong dam bao IP outbound co dinh, nen voi demo co the can mo
+firewall rong hon binh thuong. Khi len production, nen dung static outbound IP/private
+network/VPS de khong phai mo database qua rong.
+
+Sau khi tao database, chay:
+
+```text
+sql/setup-database.sql
+```
+
+Chuoi ket noi deploy mau:
+
+```properties
+DB_URL=jdbc:sqlserver://your-server.database.windows.net:1433;databaseName=CarRentalDB;encrypt=true;trustServerCertificate=false;hostNameInCertificate=*.database.windows.net;loginTimeout=30;
+DB_USERNAME=your_azure_sql_user
+DB_PASSWORD=your_azure_sql_password
+```
+
+### 2. Deploy app tren Render
+
+Tren Render:
+
+1. Chon `New` > `Blueprint` neu muon dung `render.yaml`, hoac `New` > `Web Service`.
+2. Ket noi GitHub repo `himawaridev/CarRentalSystem`.
+3. Chon runtime Docker neu tao Web Service thu cong.
+4. Dat health check path:
+
+```text
+/CarRentalSystem/health
+```
+
+5. Them environment variables:
+
+```properties
+APP_BASE_URL=https://your-render-service.onrender.com/CarRentalSystem
+DB_URL=jdbc:sqlserver://your-server.database.windows.net:1433;databaseName=CarRentalDB;encrypt=true;trustServerCertificate=false;hostNameInCertificate=*.database.windows.net;loginTimeout=30;
+DB_USERNAME=your_azure_sql_user
+DB_PASSWORD=your_azure_sql_password
+AUTH_DEV_MODE=false
+```
+
+Neu can thanh toan/OAuth/email that, them tiep:
+
+```properties
+PAYOS_CLIENT_ID=your_payos_client_id
+PAYOS_API_KEY=your_payos_api_key
+PAYOS_CHECKSUM_KEY=your_payos_checksum_key
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+FACEBOOK_CLIENT_ID=your_facebook_app_id
+FACEBOOK_CLIENT_SECRET=your_facebook_app_secret
+```
+
+Luu y: Render Free khong cho gui outbound SMTP tren cac port pho bien nhu `25`,
+`465`, `587`. Vi vay Gmail SMTP co the khong gui duoc tren Render Free. Khi demo,
+nen dung tai khoan mau hoac OAuth. Neu can email xac minh/reset password that,
+hay chuyen sang Render paid/VPS hoac bo sung dich vu email gui qua HTTP API.
+
+Neu chay o moi truong cho phep SMTP, co the them:
+
+```properties
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USERNAME=your_email@gmail.com
+SMTP_PASSWORD=your_email_app_password
+SMTP_FROM=your_email@gmail.com
+SMTP_STARTTLS=true
+SMTP_SSL=false
+```
+
+Sau khi Render cap URL public, cap nhat lai callback/return URL:
+
+```text
+Google OAuth redirect:
+https://your-render-service.onrender.com/CarRentalSystem/oauth/google/callback
+
+Facebook OAuth redirect:
+https://your-render-service.onrender.com/CarRentalSystem/oauth/facebook/callback
+
+PayOS webhook:
+https://your-render-service.onrender.com/CarRentalSystem/payment/webhook/payos
+```
 
 ## Tong quan nghiep vu
 

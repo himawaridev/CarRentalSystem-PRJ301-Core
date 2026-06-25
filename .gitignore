@@ -27,6 +27,7 @@ Thumbs.db
 *.log
 
 # Local tools
+.codex/
 tools/ngrok/
 
 # Local secrets
