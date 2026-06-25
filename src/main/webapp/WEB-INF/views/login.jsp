@@ -30,11 +30,13 @@
         </c:if>
 
         <div class="oauth-grid mb-3">
-            <a class="btn btn-oauth" href="${pageContext.request.contextPath}/oauth/google?entry=login">
-                <i class="bi bi-google"></i>Google
+            <a class="btn btn-oauth btn-oauth-google" href="${pageContext.request.contextPath}/oauth/google?entry=login">
+                <span class="oauth-icon"><i class="bi bi-google"></i></span>
+                <span class="oauth-label">Tiep tuc voi Google</span>
             </a>
-            <a class="btn btn-oauth" href="${pageContext.request.contextPath}/oauth/facebook?entry=login">
-                <i class="bi bi-facebook"></i>Facebook
+            <a class="btn btn-oauth btn-oauth-facebook" href="${pageContext.request.contextPath}/oauth/facebook?entry=login">
+                <span class="oauth-icon"><i class="bi bi-facebook"></i></span>
+                <span class="oauth-label">Tiep tuc voi Facebook</span>
             </a>
         </div>
         <div class="auth-divider"><span>hoac</span></div>

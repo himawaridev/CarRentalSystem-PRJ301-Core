@@ -21,11 +21,13 @@
         </div>
 
         <div class="oauth-grid mb-3">
-            <a class="btn btn-oauth" href="${pageContext.request.contextPath}/oauth/google?entry=register">
-                <i class="bi bi-google"></i>Dang ky bang Google
+            <a class="btn btn-oauth btn-oauth-google" href="${pageContext.request.contextPath}/oauth/google?entry=register">
+                <span class="oauth-icon"><i class="bi bi-google"></i></span>
+                <span class="oauth-label">Dang ky bang Google</span>
             </a>
-            <a class="btn btn-oauth" href="${pageContext.request.contextPath}/oauth/facebook?entry=register">
-                <i class="bi bi-facebook"></i>Facebook
+            <a class="btn btn-oauth btn-oauth-facebook" href="${pageContext.request.contextPath}/oauth/facebook?entry=register">
+                <span class="oauth-icon"><i class="bi bi-facebook"></i></span>
+                <span class="oauth-label">Dang ky bang Facebook</span>
             </a>
         </div>
         <div class="auth-divider"><span>hoac nhap thong tin</span></div>
