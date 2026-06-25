@@ -578,7 +578,7 @@ a {
 .oauth-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
+    gap: 12px;
 }
 .oauth-grid .btn-oauth:only-child {
     grid-column: 1 / -1;
@@ -586,19 +586,61 @@ a {
 .btn-oauth {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    gap: 8px;
-    border: 1.5px solid var(--gray-300);
-    color: var(--gray-700);
-    background: var(--white);
-    border-radius: var(--radius-sm);
+    justify-content: flex-start;
+    gap: 10px;
+    min-height: 48px;
+    border: 1.5px solid var(--gray-200);
+    color: var(--gray-800);
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    border-radius: 10px;
     font-weight: 700;
-    padding: 10px 14px;
+    padding: 8px 12px;
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition);
+    overflow: hidden;
 }
 .btn-oauth:hover {
-    border-color: var(--primary);
-    color: var(--primary-dark);
-    background: var(--primary-50);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+    background: var(--white);
+}
+.btn-oauth:active {
+    transform: translateY(0);
+    box-shadow: var(--shadow-sm);
+}
+.btn-oauth .oauth-icon {
+    width: 30px;
+    height: 30px;
+    min-width: 30px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--white);
+    border: 1px solid var(--gray-200);
+    font-size: 1rem;
+}
+.btn-oauth .oauth-label {
+    min-width: 0;
+    flex: 1;
+    font-size: 0.86rem;
+    line-height: 1.2;
+    white-space: normal;
+    text-align: left;
+}
+.btn-oauth-google:hover {
+    border-color: #fbbc05;
+    color: #111827;
+}
+.btn-oauth-google .oauth-icon {
+    color: #ea4335;
+}
+.btn-oauth-facebook:hover {
+    border-color: #1877f2;
+    color: #0f172a;
+}
+.btn-oauth-facebook .oauth-icon {
+    color: #1877f2;
 }
 .auth-divider {
     position: relative;
@@ -627,6 +669,15 @@ a {
     font-size: 1.25rem;
     font-weight: 800;
     letter-spacing: 6px;
+}
+
+@media (max-width: 480px) {
+    .oauth-grid {
+        grid-template-columns: 1fr;
+    }
+    .btn-oauth .oauth-label {
+        font-size: 0.9rem;
+    }
 }
 
 /* ===== Tabs ===== */

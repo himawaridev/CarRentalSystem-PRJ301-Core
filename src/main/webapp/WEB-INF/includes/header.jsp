@@ -11,7 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" rel="stylesheet">
-    <link href="${ctx}/css/style.css?v=8" rel="stylesheet">
+    <link href="${ctx}/css/style.css?v=9" rel="stylesheet">
 </head>
 <body>
 <nav class="navbar navbar-expand-lg navbar-light bg-dark-custom sticky-top">
