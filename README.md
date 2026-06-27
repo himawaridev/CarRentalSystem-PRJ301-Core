@@ -105,7 +105,16 @@ Can dam bao SQL Server:
 
 ### 3. Tao database va nap du lieu mau
 
-Mo SSMS, ket noi SQL Server, chay:
+Thu muc `sql/` hien co 4 file. Khong phai may moi nao cung can chay ca 4 file:
+
+| File | Khi nao dung | Co bat buoc cho may moi? |
+| --- | --- | --- |
+| `sql/setup-database.sql` | Tao `CarRentalDB`, schema moi nhat, tai khoan demo, xe demo, xe PayOS test va anh online | Co |
+| `sql/check-database.sql` | Kiem tra SQL Server dang ket noi dung DB chua, schema thanh toan/hoan tien co du chua | Khong, chi dung de kiem tra |
+| `sql/upgrade-existing-database.sql` | Nang cap database cu da co du lieu len schema moi | Khong, khong chay tren DB moi |
+| `sql/enable-sqlserver-tcp.ps1` | Bat TCP/IP va port `1433` cho SQL Server khi app khong ket noi duoc DB | Khong, chi dung khi SQL Server chua mo TCP/IP |
+
+Voi may moi clone project, mo SSMS, ket noi SQL Server, chay:
 
 ```text
 sql/setup-database.sql
@@ -113,6 +122,12 @@ sql/setup-database.sql
 
 File setup da tao schema, tai khoan demo, xe demo, xe test PayOS va `ImageUrl` online tu `4kwallpapers.com`, nen sau khi clone va seed DB,
 trang danh sach xe se hien anh neu may co internet.
+
+Sau khi chay setup, co the chay them file sau de kiem tra:
+
+```text
+sql/check-database.sql
+```
 
 Neu muon xoa database cu va tao lai sach tu dau, trong SSMS chay truoc:
 
@@ -128,11 +143,13 @@ Sau do chay lai:
 sql/setup-database.sql
 ```
 
-Co the chay script kiem tra:
+Neu may bao loi khong ket noi duoc `localhost:1433`, mo PowerShell bang quyen Administrator va chay:
 
 ```text
-sql/check-database.sql
+sql/enable-sqlserver-tcp.ps1
 ```
+
+Sau do restart SQL Server hoac restart may neu can.
 
 ### 4. Build va chay
 
@@ -230,6 +247,119 @@ http://localhost:9999/CarRentalSystem/oauth/facebook/callback
 
 Neu dung ngrok, doi `APP_BASE_URL` sang domain ngrok va cap nhat callback URL tuong ung.
 
+#### Lay Google Client ID/Client Secret cho dang nhap Google
+
+Loi sau nghia la project chua co file `config/auth-local.properties`, hoac file da co nhung chua dien `GOOGLE_CLIENT_ID` va `GOOGLE_CLIENT_SECRET` that:
+
+```text
+Chua cau hinh dang nhap Google. Hay dien client id/client secret trong config/auth-local.properties.
+```
+
+Lam theo cac buoc sau:
+
+1. Vao Google Cloud Console:
+
+```text
+https://console.cloud.google.com/
+```
+
+2. Tao project moi hoac chon project dang dung.
+
+3. Vao:
+
+```text
+APIs & Services > OAuth consent screen
+```
+
+4. Cau hinh consent screen:
+
+- App name: `Car Rental`
+- User support email: email cua ban
+- Audience/User type: chon `External` neu dung Gmail ca nhan hoac muon test voi tai khoan ngoai organization
+- Contact email: email cua ban
+- Data access/scopes: ung dung nay chi dang nhap nen chi can cac scope co ban `openid`, `email`, `profile`
+- Test users: neu app dang o che do Testing, them email Google ma ban se dung de dang nhap
+
+5. Tao OAuth Client:
+
+```text
+APIs & Services > Credentials > Create Credentials > OAuth client ID
+```
+
+Chon:
+
+```text
+Application type: Web application
+Name: CarRentalSystem Local
+```
+
+6. Dien Authorized JavaScript origins:
+
+```text
+http://localhost:9999
+```
+
+Neu chay port khac thi thay `9999` bang port Tomcat thuc te.
+
+7. Dien Authorized redirect URIs. Gia tri nay phai khop tuyet doi voi callback cua app:
+
+```text
+http://localhost:9999/CarRentalSystem/oauth/google/callback
+```
+
+Neu dung ngrok, vi du:
+
+```text
+APP_BASE_URL=https://your-ngrok-domain.ngrok-free.app/CarRentalSystem
+Authorized redirect URI=https://your-ngrok-domain.ngrok-free.app/CarRentalSystem/oauth/google/callback
+```
+
+Google yeu cau `redirect_uri` phai khop ca scheme `http/https`, domain, port, path va dau `/` cuoi neu co. Neu sai se gap loi `redirect_uri_mismatch`.
+
+8. Bam `Create`, copy:
+
+```text
+Client ID
+Client Secret
+```
+
+9. Tao file local tren may, khong commit:
+
+```text
+config/auth-local.properties
+```
+
+Noi dung toi thieu de bat dang nhap Google local:
+
+```properties
+APP_BASE_URL=http://localhost:9999/CarRentalSystem
+AUTH_DEV_MODE=true
+
+GOOGLE_CLIENT_ID=paste_client_id_here
+GOOGLE_CLIENT_SECRET=paste_client_secret_here
+```
+
+Khong de gia tri mau nhu `your_google_client_id`, vi do khong phai key that.
+
+10. Neu chay bang Tomcat ngoai NetBeans voi `CATALINA_BASE=D:\ApacheTomcat`, nen copy them file nay vao:
+
+```text
+D:\ApacheTomcat\config\auth-local.properties
+```
+
+11. Restart Tomcat va bam lai nut Google tren trang:
+
+```text
+http://localhost:9999/CarRentalSystem/login
+```
+
+Loi hay gap:
+
+- `redirect_uri_mismatch`: URI tren Google Cloud khong khop voi `APP_BASE_URL + /oauth/google/callback`.
+- `invalid_client`: copy sai Client ID/Secret, dung key cua project khac, hoac dang de placeholder.
+- `access_denied`/`403`: app dang Testing nhung email dang nhap chua nam trong Test users.
+- Nut Google van bao chua cau hinh: file `auth-local.properties` khong nam dung noi app dang doc, hoac chua restart Tomcat.
+
 ### 7. Cau hinh thanh toan PayOS neu can test QR that
 
 Tao file local, khong commit:
@@ -250,38 +380,114 @@ APP_BASE_URL=http://localhost:9999/CarRentalSystem
 Neu khong cau hinh PayOS, cac trang public, dang nhap, quan ly xe, tim xe van chay;
 phan tao QR thanh toan that se bao thieu cau hinh.
 
-## Deploy mien phi tren Render
+## Deploy mien phi/de demo
 
-Project da co san `Dockerfile`, `.dockerignore` va `render.yaml` de deploy len Render
-bang Docker/Tomcat 10.1. Ung dung van can mot SQL Server public; de dung free, nen tao
-Azure SQL Database Free, sau do cho Render ket noi den database do.
+Project co the deploy demo bang cac cong cu free, nhung can hieu ro gioi han:
 
-Luu y ve Render Free:
+| Cach | Dung khi nao | Uu diem | Gioi han |
+| --- | --- | --- | --- |
+| Local Tomcat + ngrok | Demo nhanh PayOS webhook/OAuth tren may ca nhan | Gan nhu khong can deploy app | May local phai bat, URL ngrok co the doi |
+| Render Free + Azure SQL Database Free | Can URL public cho nguoi khac truy cap demo | Co Dockerfile/render.yaml san, phu hop voi Jakarta/Tomcat | Render free co cold start/sleep, Azure SQL free co quota thang |
+| VPS/paid service | Can production on dinh | Chu dong hon | Khong con mien phi |
 
-- Web Service free co the sleep sau mot khoang thoi gian khong co request.
-- Khong nen dung cron/ping lien tuc chi de tranh sleep, vi do la cach lach gioi han free tier.
-- De demo, chap nhan cold start khi mo lai app. Neu can webhook PayOS on dinh/luon online,
-  nen nang Render paid hoac chuyen sang VPS.
-
-### 1. Tao database cloud
-
-Tao Azure SQL Database Free, sau do tao user/password rieng cho app. Khi chay file SQL tren
-Azure SQL, hay ket noi truc tiep vao database da tao. Neu editor bao loi o cac dong
-`CREATE DATABASE CarRentalDB` hoac `USE CarRentalDB`, bo qua/loai cac dong do vi Azure SQL
-khong cho doi database bang `USE` trong cung mot ket noi.
-
-Neu dung Render Free ket noi toi Azure SQL, can cau hinh firewall/public network access
-cho database. Render Free khong dam bao IP outbound co dinh, nen voi demo co the can mo
-firewall rong hon binh thuong. Khi len production, nen dung static outbound IP/private
-network/VPS de khong phai mo database qua rong.
-
-Sau khi tao database, chay:
+Hien project giu san:
 
 ```text
-sql/setup-database.sql
+Dockerfile
+.dockerignore
+render.yaml
+src/main/java/com/carrental/controller/HealthServlet.java
 ```
 
-Chuoi ket noi deploy mau:
+Cac file nay chi phuc vu deploy, khong anh huong chay local bang NetBeans/Tomcat.
+
+Tai lieu nen doc khi deploy:
+
+- Render Web Services: `https://render.com/docs/web-services`
+- Render Free instance type: `https://render.com/docs/free`
+- Azure SQL Database free offer: `https://learn.microsoft.com/azure/azure-sql/database/free-offer`
+
+### Cach A: Demo local public bang ngrok
+
+Dung cach nay neu chi can PayOS goi webhook ve may local.
+
+1. Chay Tomcat local:
+
+```text
+http://localhost:9999/CarRentalSystem
+```
+
+2. Mo ngrok cho port Tomcat:
+
+```powershell
+ngrok http 9999
+```
+
+3. Lay domain HTTPS ngrok, vi du:
+
+```text
+https://your-ngrok-domain.ngrok-free.app
+```
+
+4. Cap nhat file local:
+
+```text
+config/payment-local.properties
+config/auth-local.properties
+```
+
+Gia tri:
+
+```properties
+APP_BASE_URL=https://your-ngrok-domain.ngrok-free.app/CarRentalSystem
+```
+
+5. Cap nhat URL tren cac cong:
+
+```text
+Google OAuth redirect:
+https://your-ngrok-domain.ngrok-free.app/CarRentalSystem/oauth/google/callback
+
+Facebook OAuth redirect:
+https://your-ngrok-domain.ngrok-free.app/CarRentalSystem/oauth/facebook/callback
+
+PayOS webhook:
+https://your-ngrok-domain.ngrok-free.app/CarRentalSystem/payment/webhook/payos
+```
+
+6. Restart Tomcat sau khi doi config.
+
+### Cach B: Deploy app tren Render Free
+
+Dung cach nay khi can URL public ma khong phu thuoc vao may local.
+
+Luu y:
+
+- Render free web service co the sleep khi khong co request. Lan truy cap dau sau khi sleep se cham hon.
+- Khong nen dung cron/ping lien tuc chi de tranh sleep.
+- Neu can PayOS webhook on dinh hoac demo cham diem khong duoc gian doan, nen chuan bi phuong an paid/VPS.
+
+#### 1. Tao Azure SQL Database Free
+
+Ung dung dang dung SQL Server, nen database free phu hop nhat la Azure SQL Database Free.
+
+Sau khi tao database tren Azure:
+
+1. Tao SQL user/password rieng cho app.
+2. Bat public network access/firewall de Render co the ket noi.
+3. Ket noi toi database bang SSMS/Azure Data Studio.
+4. Chay `sql/setup-database.sql`.
+
+Neu Azure SQL editor bao loi o cac dong:
+
+```sql
+CREATE DATABASE CarRentalDB
+USE CarRentalDB
+```
+
+thi tao database tren portal truoc, ket noi truc tiep vao database do, roi bo qua/loai cac dong tao/chon database trong script.
+
+Chuoi ket noi mau:
 
 ```properties
 DB_URL=jdbc:sqlserver://your-server.database.windows.net:1433;databaseName=CarRentalDB;encrypt=true;trustServerCertificate=false;hostNameInCertificate=*.database.windows.net;loginTimeout=30;
@@ -289,20 +495,22 @@ DB_USERNAME=your_azure_sql_user
 DB_PASSWORD=your_azure_sql_password
 ```
 
-### 2. Deploy app tren Render
+#### 2. Tao Web Service tren Render
 
-Tren Render:
+Co 2 cach:
 
-1. Chon `New` > `Blueprint` neu muon dung `render.yaml`, hoac `New` > `Web Service`.
-2. Ket noi GitHub repo `himawaridev/CarRentalSystem`.
-3. Chon runtime Docker neu tao Web Service thu cong.
-4. Dat health check path:
+1. `New` > `Blueprint`: Render doc file `render.yaml`.
+2. `New` > `Web Service`: ket noi GitHub repo va chon runtime Docker.
+
+Neu tao thu cong, cau hinh:
 
 ```text
-/CarRentalSystem/health
+Runtime: Docker
+Dockerfile path: ./Dockerfile
+Health check path: /CarRentalSystem/health
 ```
 
-5. Them environment variables:
+Environment variables bat buoc:
 
 ```properties
 APP_BASE_URL=https://your-render-service.onrender.com/CarRentalSystem
@@ -312,7 +520,7 @@ DB_PASSWORD=your_azure_sql_password
 AUTH_DEV_MODE=false
 ```
 
-Neu can thanh toan/OAuth/email that, them tiep:
+Environment variables tuy chon:
 
 ```properties
 PAYOS_CLIENT_ID=your_payos_client_id
@@ -322,16 +530,6 @@ GOOGLE_CLIENT_ID=your_google_client_id
 GOOGLE_CLIENT_SECRET=your_google_client_secret
 FACEBOOK_CLIENT_ID=your_facebook_app_id
 FACEBOOK_CLIENT_SECRET=your_facebook_app_secret
-```
-
-Luu y: Render Free khong cho gui outbound SMTP tren cac port pho bien nhu `25`,
-`465`, `587`. Vi vay Gmail SMTP co the khong gui duoc tren Render Free. Khi demo,
-nen dung tai khoan mau hoac OAuth. Neu can email xac minh/reset password that,
-hay chuyen sang Render paid/VPS hoac bo sung dich vu email gui qua HTTP API.
-
-Neu chay o moi truong cho phep SMTP, co the them:
-
-```properties
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USERNAME=your_email@gmail.com
@@ -341,7 +539,7 @@ SMTP_STARTTLS=true
 SMTP_SSL=false
 ```
 
-Sau khi Render cap URL public, cap nhat lai callback/return URL:
+Sau khi Render cap URL public, cap nhat lai:
 
 ```text
 Google OAuth redirect:
@@ -353,6 +551,26 @@ https://your-render-service.onrender.com/CarRentalSystem/oauth/facebook/callback
 PayOS webhook:
 https://your-render-service.onrender.com/CarRentalSystem/payment/webhook/payos
 ```
+
+#### 3. Kiem tra sau deploy
+
+Mo lan luot:
+
+```text
+https://your-render-service.onrender.com/CarRentalSystem/health
+https://your-render-service.onrender.com/CarRentalSystem/search
+https://your-render-service.onrender.com/CarRentalSystem/login
+```
+
+Checklist:
+
+- `/health` tra ve JSON `{"status":"ok"}`.
+- `/search` hien danh sach xe.
+- Dang nhap duoc bang `customer01/cust123`.
+- Tao hop dong demo voi xe PayOS 2.000 VND.
+- PayOS tao QR/link dung domain public.
+- Webhook PayOS tren portal tro dung `/CarRentalSystem/payment/webhook/payos`.
+- Google OAuth redirect URI trung tuyet doi voi `APP_BASE_URL + /oauth/google/callback`.
 
 ## Tong quan nghiep vu
 
@@ -790,6 +1008,15 @@ Yeu cau SQL Server:
 ## Tao database va seed du lieu
 
 Tat ca huong dan SQL nam trong README chung nay. Thu muc `sql/` chi giu script can chay.
+
+Trong `sql/` co 4 file:
+
+| File | Muc dich |
+| --- | --- |
+| `setup-database.sql` | Dung cho may moi hoac khi muon tao lai DB sach. File nay da gom schema, tai khoan mau, xe demo, xe test PayOS va cau hinh seed can thiet. |
+| `upgrade-existing-database.sql` | Dung khi da co database cu va muon giu data cu. File nay chi them/sua schema thieu, khong dung thay cho setup DB moi. |
+| `check-database.sql` | Dung de chan doan sau khi setup/upgrade: kiem tra dang ket noi dung SQL Server, DB va cac bang/cot quan trong. |
+| `enable-sqlserver-tcp.ps1` | Script PowerShell ho tro bat TCP/IP port `1433` cho SQL Server. Chi chay khi app khong ket noi duoc DB qua `localhost:1433`. |
 
 Neu tao database moi hoac vua xoa `CarRentalDB`:
 
