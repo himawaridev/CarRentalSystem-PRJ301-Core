@@ -42,10 +42,6 @@ public class BookingServlet extends HttpServlet {
         String[] carIds = request.getParameterValues("carId");
         String selectionMode = request.getParameter("selectionMode");
 
-        if (redirectToProfileIfMissingBank(request, response)) {
-            return;
-        }
-
         if (!populateBookingView(request, pickupStr, returnStr, carIds, null, selectionMode)) {
             response.sendRedirect(request.getContextPath() + "/search");
             return;
@@ -65,12 +61,6 @@ public class BookingServlet extends HttpServlet {
         }
 
         UserDAO userDAO = new UserDAO();
-        User currentUser = userDAO.getUserById(user.getUserId());
-        if (currentUser == null || !currentUser.hasRefundBankInfo()) {
-            response.sendRedirect(profileRequiredUrl(request));
-            return;
-        }
-
         Integer customerId = userDAO.getCustomerIdByUserId(user.getUserId());
         if (customerId == null) {
             response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
@@ -341,33 +331,4 @@ public class BookingServlet extends HttpServlet {
         return set;
     }
 
-    private boolean redirectToProfileIfMissingBank(HttpServletRequest request, HttpServletResponse response)
-            throws IOException {
-        HttpSession session = request.getSession(false);
-        User user = session == null ? null : (User) session.getAttribute("loggedInUser");
-        if (user == null) {
-            return false;
-        }
-
-        User currentUser = new UserDAO().getUserById(user.getUserId());
-        if (currentUser != null && currentUser.hasRefundBankInfo()) {
-            return false;
-        }
-
-        if (session != null) {
-            session.setAttribute("flashError",
-                    "Vui long cap nhat tai khoan ngan hang nhan hoan coc truoc khi dat xe.");
-        }
-        response.sendRedirect(profileRequiredUrl(request));
-        return true;
-    }
-
-    private String profileRequiredUrl(HttpServletRequest request) {
-        String current = request.getRequestURI();
-        if (request.getQueryString() != null && !request.getQueryString().isBlank()) {
-            current += "?" + request.getQueryString();
-        }
-        return request.getContextPath() + "/profile?required=bank&redirect="
-                + URLEncoder.encode(current, StandardCharsets.UTF_8);
-    }
 }
