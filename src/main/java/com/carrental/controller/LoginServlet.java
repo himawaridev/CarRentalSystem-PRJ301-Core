@@ -2,7 +2,6 @@ package com.carrental.controller;
 
 import com.carrental.dao.UserDAO;
 import com.carrental.model.User;
-import com.carrental.service.AuthConfig;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -22,7 +21,6 @@ public class LoginServlet extends HttpServlet {
             response.sendRedirect(request.getContextPath() + "/search");
             return;
         }
-        attachAuthConfig(request);
         attachFlash(request);
         request.getRequestDispatcher("/WEB-INF/views/login.jsp").forward(request, response);
     }
@@ -37,19 +35,12 @@ public class LoginServlet extends HttpServlet {
         User user = userDAO.login(username, password);
 
         if (user == null) {
-            attachAuthConfig(request);
             request.setAttribute("error", "Sai ten dang nhap hoac mat khau.");
             request.getRequestDispatcher("/WEB-INF/views/login.jsp").forward(request, response);
             return;
         }
 
         AuthSessionHelper.signIn(request, response, user, request.getParameter("redirect"));
-    }
-
-    private void attachAuthConfig(HttpServletRequest request) {
-        AuthConfig config = new AuthConfig();
-        request.setAttribute("googleLoginEnabled", config.googleConfigured());
-        request.setAttribute("facebookLoginEnabled", config.facebookConfigured());
     }
 
     private void attachFlash(HttpServletRequest request) {

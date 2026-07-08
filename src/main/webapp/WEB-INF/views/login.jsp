@@ -22,24 +22,6 @@
         <c:if test="${param.success == 'registered'}">
             <div class="alert alert-custom-success"><i class="bi bi-check-circle me-1"></i>Dang ky thanh cong! Hay dang nhap.</div>
         </c:if>
-        <c:if test="${param.success == 'verified'}">
-            <div class="alert alert-custom-success"><i class="bi bi-check-circle me-1"></i>Email da duoc xac minh. Hay dang nhap.</div>
-        </c:if>
-        <c:if test="${param.success == 'reset'}">
-            <div class="alert alert-custom-success"><i class="bi bi-check-circle me-1"></i>Mat khau da duoc cap nhat. Hay dang nhap lai.</div>
-        </c:if>
-
-        <div class="oauth-grid mb-3">
-            <a class="btn btn-oauth btn-oauth-google" href="${pageContext.request.contextPath}/oauth/google?entry=login">
-                <span class="oauth-icon"><i class="bi bi-google"></i></span>
-                <span class="oauth-label">Tiep tuc voi Google</span>
-            </a>
-            <a class="btn btn-oauth btn-oauth-facebook" href="${pageContext.request.contextPath}/oauth/facebook?entry=login">
-                <span class="oauth-icon"><i class="bi bi-facebook"></i></span>
-                <span class="oauth-label">Tiep tuc voi Facebook</span>
-            </a>
-        </div>
-        <div class="auth-divider"><span>hoac</span></div>
 
         <form method="post" action="${pageContext.request.contextPath}/login">
             <div class="mb-3">
@@ -49,9 +31,6 @@
             <div class="mb-3">
                 <label class="form-label">Mat khau</label>
                 <input type="password" name="password" class="form-control" placeholder="Nhap password..." required>
-                <div class="text-end mt-1">
-                    <a href="${pageContext.request.contextPath}/forgot-password" class="small text-accent">Quen mat khau?</a>
-                </div>
             </div>
             <c:if test="${not empty param.redirect}">
                 <input type="hidden" name="redirect" value="${param.redirect}">

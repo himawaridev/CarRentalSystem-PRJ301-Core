@@ -16,22 +16,6 @@
         <c:if test="${not empty success}">
             <div class="alert alert-custom-success"><i class="bi bi-check-circle me-1"></i>${success}</div>
         </c:if>
-        <div class="alert alert-custom-info mb-3">
-            <i class="bi bi-envelope-check me-1"></i>Sau khi dang ky, he thong se gui ma xac minh toi email cua ban.
-        </div>
-
-        <div class="oauth-grid mb-3">
-            <a class="btn btn-oauth btn-oauth-google" href="${pageContext.request.contextPath}/oauth/google?entry=register">
-                <span class="oauth-icon"><i class="bi bi-google"></i></span>
-                <span class="oauth-label">Dang ky bang Google</span>
-            </a>
-            <a class="btn btn-oauth btn-oauth-facebook" href="${pageContext.request.contextPath}/oauth/facebook?entry=register">
-                <span class="oauth-icon"><i class="bi bi-facebook"></i></span>
-                <span class="oauth-label">Dang ky bang Facebook</span>
-            </a>
-        </div>
-        <div class="auth-divider"><span>hoac nhap thong tin</span></div>
-
         <form method="post" action="${pageContext.request.contextPath}/register">
             <div class="row">
                 <div class="col-md-6 mb-3">
