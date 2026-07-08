@@ -391,7 +391,7 @@ public class ContractDAO {
                 .replaceAll("\\s+", " ")
                 .trim();
         if (clean.isBlank()) {
-            return "vui long thu lai sau hoac kiem tra ket noi payOS/ngrok.";
+            return "vui long thu lai sau hoac kiem tra cau hinh thanh toan.";
         }
         int maxLength = 240;
         return clean.length() <= maxLength ? clean : clean.substring(0, maxLength) + "...";
