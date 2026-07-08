@@ -49,15 +49,14 @@
                     </ul>
                 </div>
 
-                <!-- Support -->
+                <!-- Project scope -->
                 <div class="col-lg-2 col-md-6">
-                    <h6 class="footer-heading">Ho tro</h6>
+                    <h6 class="footer-heading">Chuc nang</h6>
                     <ul class="footer-links">
-                        <li><a href="${ctx}/support">Yeu cau ho tro</a></li>
-                        <li><a href="#">Huong dan thue xe</a></li>
-                        <li><a href="#">Chinh sach bao hiem</a></li>
-                        <li><a href="#">Dieu khoan su dung</a></li>
-                        <li><a href="#">Cau hoi thuong gap</a></li>
+                        <li><a href="${ctx}/search">Tim kiem xe</a></li>
+                        <li><a href="${ctx}/cars">Danh sach xe</a></li>
+                        <li><a href="${ctx}/my-contracts">Hop dong cua toi</a></li>
+                        <li><a href="${ctx}/login">Dang nhap he thong</a></li>
                     </ul>
                 </div>
 
