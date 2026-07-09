@@ -20,7 +20,7 @@
             <thead>
                 <tr>
                     <th>ID</th><th>Username</th><th>Ho ten</th><th>Email</th>
-                    <th>Phone</th><th>Ngan hang</th><th>Roles</th><th>Trang thai</th><th>Hanh dong</th>
+                    <th>Phone</th><th>Roles</th><th>Trang thai</th><th>Hanh dong</th>
                 </tr>
             </thead>
             <tbody>
@@ -31,15 +31,6 @@
                     <td>${u.fullName}</td>
                     <td class="text-muted small">${u.email}</td>
                     <td>${u.phone}</td>
-                    <td class="small">
-                        <c:choose>
-                            <c:when test="${u.refundBankInfo}">
-                                <strong>${u.bankName}</strong><br>
-                                <span class="text-muted">${u.bankAccountNumber}</span>
-                            </c:when>
-                            <c:otherwise><span class="text-muted">Chua co</span></c:otherwise>
-                        </c:choose>
-                    </td>
                     <td>
                         <c:forEach var="r" items="${userRolesMap[u.userId]}">
                             <span class="car-tag">${r}</span>
@@ -103,28 +94,6 @@
                                         <div class="col-12">
                                             <label class="form-label">Dia chi</label>
                                             <input type="text" name="address" class="form-control" value="${u.address}">
-                                        </div>
-                                        <div class="col-md-4">
-                                            <label class="form-label">Ngan hang nhan hoan tien</label>
-                                            <select name="bankCode" class="form-select">
-                                                <option value="">Chua cau hinh</option>
-                                                <c:forEach var="bank" items="${bankOptions}">
-                                                    <option value="${bank.key}" ${u.bankCode == bank.key ? 'selected' : ''}>
-                                                        ${bank.value}
-                                                    </option>
-                                                </c:forEach>
-                                            </select>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <label class="form-label">So tai khoan</label>
-                                            <input type="text" name="bankAccountNumber" class="form-control"
-                                                   value="${u.bankAccountNumber}" maxlength="20">
-                                        </div>
-                                        <div class="col-md-4">
-                                            <label class="form-label">Chu tai khoan</label>
-                                            <input type="text" name="bankAccountHolder" class="form-control text-uppercase"
-                                                   value="${u.bankAccountHolder}" maxlength="120"
-                                                   placeholder="VD: NGUYEN VAN A">
                                         </div>
                                     </div>
                                 </div>

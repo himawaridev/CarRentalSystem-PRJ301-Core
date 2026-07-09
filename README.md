@@ -17,7 +17,7 @@ Day la ban tach rieng cua du an CarRentalSystem de thuyet trinh/nop theo de bai 
 
 Nhung tinh nang ngoai de bai khong can thuyet trinh:
 
-- PayOS/QR thanh toan that.
+- Thanh toan that qua cong ben thu ba.
 - Google/Facebook OAuth.
 - Email verification/reset password.
 - Support ticket.
@@ -45,7 +45,8 @@ Nhung tinh nang ngoai de bai khong can thuyet trinh:
 - Chon mot hoac nhieu xe cho cung mot hop dong.
 - Chon thue xe tu lai hoac co tai xe.
 - Tao hop dong thue xe.
-- Thanh toan demo noi bo sau khi tao hop dong; khong can cau hinh cong thanh toan ngoai.
+- Thanh toan trong ban Core la thanh toan gia lap noi bo de xac nhan dat coc.
+- Khong can cau hinh cong thanh toan ngoai khi demo.
 - Xem danh sach hop dong cua minh.
 
 ### Staff
@@ -176,7 +177,7 @@ customer02/cust123
 1. Customer tim xe theo thoi gian va loai xe.
 2. Customer chon nhieu xe.
 3. Customer tao hop dong voi cung ngay nhan/tra.
-4. Customer bam nut thanh toan demo de hop dong chuyen sang da giu xe.
+4. Customer bam nut thanh toan gia lap noi bo de hop dong chuyen sang da giu xe.
 5. Staff xem hop dong va xu ly don.
 6. Manager xem/cap nhat xe va tai xe.
 7. Driver xem lich lai.
@@ -184,4 +185,4 @@ customer02/cust123
 
 ## Luu y khi thuyet trinh
 
-Chi can thuyet trinh cac chuc nang trong de bai. Neu trong source con mot so lop ho tro ky thuat hoac chuc nang mo rong, khong dua vao phan demo chinh.
+Chi can thuyet trinh cac chuc nang trong de bai. Phan thanh toan cua ban Core la demo noi bo: bam nut thanh toan de xac nhan dat coc, khong trinh bay nhu cong thanh toan that.

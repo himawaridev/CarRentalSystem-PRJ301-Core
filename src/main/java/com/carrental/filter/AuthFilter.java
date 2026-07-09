@@ -21,11 +21,6 @@ public class AuthFilter implements Filter {
         User user = (session != null) ? (User) session.getAttribute("loggedInUser") : null;
         String path = request.getServletPath();
 
-        if (path.startsWith("/payment/webhook")) {
-            chain.doFilter(req, resp);
-            return;
-        }
-
         if (user == null) {
             String uri = request.getRequestURI();
             String query = request.getQueryString();

@@ -880,11 +880,6 @@ a {
     border-color: var(--warning-border);
     background: var(--warning-bg);
 }
-.settlement-refund {
-    border-color: var(--success-border);
-    background: var(--success-bg);
-}
-
 /* ===== Action Buttons (Small table buttons) ===== */
 .btn-sm {
     transition: var(--transition);
@@ -1609,29 +1604,6 @@ a.text-accent:hover {
     }
 }
 
-.profile-bank-locked,
-.profile-bank-open {
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
-    border-radius: var(--radius-sm);
-    padding: 10px 12px;
-    font-size: 0.82rem;
-    font-weight: 600;
-}
-
-.profile-bank-locked {
-    background: var(--gray-100);
-    color: var(--gray-600);
-    border: 1px solid var(--gray-300);
-}
-
-.profile-bank-open {
-    background: var(--primary-100);
-    color: var(--primary-dark);
-    border: 1px solid var(--primary-200);
-}
-
 .support-ticket-card {
     border: 1px solid var(--gray-200);
     border-radius: var(--radius);
@@ -1730,15 +1702,13 @@ a.text-accent:hover {
     margin: 18px 0;
 }
 
-.settlement-total-box,
-.settlement-refund-amount {
+.settlement-total-box {
     border-radius: var(--radius-sm);
     background: var(--gray-100);
     padding: 14px;
 }
 
-.settlement-total-box span,
-.settlement-refund-amount span {
+.settlement-total-box span {
     display: block;
     color: var(--gray-500);
     font-size: 0.78rem;
@@ -1746,58 +1716,11 @@ a.text-accent:hover {
     text-transform: uppercase;
 }
 
-.settlement-total-box strong,
-.settlement-refund-amount strong {
+.settlement-total-box strong {
     display: block;
     color: var(--gray-900);
     font-size: 1.05rem;
     margin-top: 4px;
-}
-
-.settlement-total-box.refund {
-    background: var(--success-bg);
-    border: 1px solid var(--success-border);
-}
-
-.settlement-total-box.refund strong,
-.settlement-refund-amount strong {
-    color: #047857;
-}
-
-.refund-bank-card {
-    display: grid;
-    gap: 12px;
-}
-
-.refund-bank-card div {
-    border-bottom: 1px dashed var(--gray-200);
-    padding-bottom: 10px;
-}
-
-.refund-bank-card div:last-child {
-    border-bottom: 0;
-    padding-bottom: 0;
-}
-
-.refund-bank-card span {
-    display: block;
-    color: var(--gray-500);
-    font-size: 0.78rem;
-    font-weight: 700;
-    text-transform: uppercase;
-}
-
-.refund-bank-card strong {
-    display: block;
-    color: var(--gray-900);
-    margin-top: 2px;
-}
-
-.settlement-refund-workspace {
-    display: grid;
-    grid-template-columns: minmax(260px, 360px) 1fr;
-    gap: 18px;
-    align-items: stretch;
 }
 
 .settlement-qr-panel,
@@ -1807,55 +1730,6 @@ a.text-accent:hover {
     border-radius: var(--radius);
     padding: 18px;
     background: var(--gray-50);
-}
-
-.refund-qr-img {
-    display: block;
-    width: min(100%, 320px);
-    aspect-ratio: 1 / 1;
-    object-fit: contain;
-    margin: 0 auto;
-    border: 1px solid var(--gray-200);
-    border-radius: var(--radius-sm);
-    background: var(--white);
-}
-
-.refund-qr-note {
-    background: var(--white);
-    border: 1px solid var(--gray-200);
-    border-radius: var(--radius-sm);
-    padding: 10px;
-    margin-top: 12px;
-    color: var(--gray-600);
-    font-size: 0.82rem;
-    overflow-wrap: anywhere;
-}
-
-.settlement-refund-amount {
-    background: var(--white);
-    border: 1px solid var(--success-border);
-}
-
-.settlement-refund-amount strong {
-    font-size: 1.35rem;
-}
-
-.refund-summary-box {
-    border-radius: 8px;
-    padding: 0.85rem;
-    border: 1px solid var(--border);
-}
-
-.refund-summary-box.completed {
-    background: #ecfdf5;
-    border-color: #86efac;
-    color: #065f46;
-}
-
-.refund-summary-box.pending {
-    background: #fffbeb;
-    border-color: #fcd34d;
-    color: #92400e;
 }
 
 .settlement-action-panel {
@@ -1876,8 +1750,7 @@ a.text-accent:hover {
         align-items: stretch;
     }
 
-    .settlement-total-grid,
-    .settlement-refund-workspace {
+    .settlement-total-grid {
         grid-template-columns: 1fr;
     }
 }

@@ -4,10 +4,10 @@ import com.carrental.service.PaymentLinkRequest;
 import com.carrental.service.PaymentLinkResponse;
 import java.sql.SQLException;
 
-final class PaymentGatewayLinkService {
+final class DemoPaymentLinkService {
     private static final String DEMO_PROVIDER = "DEMO";
 
-    private PaymentGatewayLinkService() {
+    private DemoPaymentLinkService() {
     }
 
     static PaymentLinkResponse createPaymentLink(PaymentLinkRequest request) throws SQLException {

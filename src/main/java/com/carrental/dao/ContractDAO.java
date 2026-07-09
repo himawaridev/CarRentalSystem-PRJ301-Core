@@ -363,38 +363,17 @@ public class ContractDAO {
         }
         if (message.contains("CK_Contracts_Status")
                 || message.contains("Payment_Transactions")
-                || message.contains("Payment_Webhook_Events")
                 || message.contains("ProviderOrderCode")
                 || message.contains("ProviderCheckoutUrl")
                 || message.contains("CK_Payments_Type")
                 || message.contains("CK_Payments_Status")) {
-            return "Database chua cap nhat migration thanh toan moi. Hay chay sql/upgrade-existing-database.sql roi thu lai.";
-        }
-        if (message.contains("Missing PAYOS_CLIENT_ID")
-                || message.contains("PAYOS_CLIENT_ID, PAYOS_API_KEY")) {
-            return "Chua cau hinh cong thanh toan payOS hoac payOS dang loi. Hay kiem tra PAYOS_CLIENT_ID, PAYOS_API_KEY, PAYOS_CHECKSUM_KEY va APP_BASE_URL.";
-        }
-        if (message.contains("PAYOS") || message.contains("payOS")) {
-            return "PayOS hien chua tao duoc link thanh toan. Chi tiet: " + compactGatewayMessage(message);
+            return "Database chua cap nhat cau truc thanh toan demo. Hay chay sql/upgrade-existing-database.sql roi thu lai.";
         }
         if (message.toLowerCase().contains("overlap")
                 || message.toLowerCase().contains("conflict")) {
             return "Dat xe that bai. Xe co the da duoc giu boi don hang khac trong cung thoi gian.";
         }
         return "Dat xe that bai do loi co so du lieu: " + message;
-    }
-
-    private String compactGatewayMessage(String message) {
-        String clean = message == null ? "" : message
-                .replace("Cannot create real payment link from payOS:", "")
-                .replaceAll("[\\r\\n\\t]+", " ")
-                .replaceAll("\\s+", " ")
-                .trim();
-        if (clean.isBlank()) {
-            return "vui long thu lai sau hoac kiem tra cau hinh thanh toan.";
-        }
-        int maxLength = 240;
-        return clean.length() <= maxLength ? clean : clean.substring(0, maxLength) + "...";
     }
 
     private Contract mapContract(ResultSet rs) throws SQLException {

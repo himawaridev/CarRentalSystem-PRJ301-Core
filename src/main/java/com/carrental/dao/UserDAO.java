@@ -7,7 +7,6 @@ import com.carrental.service.PasswordHasher;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
 /**
  * Data Access Object for Users, Customers, Roles, and authentication.
@@ -15,11 +14,9 @@ import java.util.Locale;
 public class UserDAO {
 
     static final String USER_COLUMNS = "UserID, Username, Email, PasswordHash, FullName, Phone, "
-            + "Address, IdentityNumber, Status, BankCode, BankName, BankAccountNumber, BankAccountHolder, "
-            + "EmailVerified, EmailVerifiedAt, AuthProvider, AuthProviderSubject, CreatedAt";
+            + "Address, IdentityNumber, Status, EmailVerified, EmailVerifiedAt, AuthProvider, AuthProviderSubject, CreatedAt";
     static final String USER_COLUMNS_QUALIFIED = "u.UserID, u.Username, u.Email, u.PasswordHash, "
-            + "u.FullName, u.Phone, u.Address, u.IdentityNumber, u.Status, u.BankCode, u.BankName, "
-            + "u.BankAccountNumber, u.BankAccountHolder, u.EmailVerified, u.EmailVerifiedAt, "
+            + "u.FullName, u.Phone, u.Address, u.IdentityNumber, u.Status, u.EmailVerified, u.EmailVerifiedAt, "
             + "u.AuthProvider, u.AuthProviderSubject, u.CreatedAt";
 
     /**
@@ -225,59 +222,16 @@ public class UserDAO {
             int userId,
             String fullName,
             String phone,
-            String address,
-            String bankCode,
-            String bankName,
-            String bankAccountNumber,
-            String bankAccountHolder) {
-
-        try (Connection conn = DBContext.getConnection()) {
-            conn.setAutoCommit(false);
-            try {
-                User current = null;
-                try (PreparedStatement ps = conn.prepareStatement(
-                        "SELECT " + USER_COLUMNS + " FROM dbo.Users WITH (UPDLOCK, ROWLOCK) WHERE UserID = ?")) {
-                    ps.setInt(1, userId);
-                    try (ResultSet rs = ps.executeQuery()) {
-                        if (rs.next()) {
-                            current = mapUser(rs);
-                        }
-                    }
-                }
-                if (current == null) {
-                    conn.rollback();
-                    return false;
-                }
-
-                boolean bankLocked = current.isBankInfoLocked();
-                String sql = "UPDATE dbo.Users SET FullName = ?, Phone = ?, Address = ?, "
-                        + (bankLocked
-                                ? "UpdatedAt = SYSUTCDATETIME() "
-                                : "BankCode = ?, BankName = ?, BankAccountNumber = ?, BankAccountHolder = ?, "
-                                        + "UpdatedAt = SYSUTCDATETIME() ")
-                        + "WHERE UserID = ?";
-                try (PreparedStatement ps = conn.prepareStatement(sql)) {
-                    ps.setString(1, normalize(fullName));
-                    ps.setString(2, normalize(phone));
-                    ps.setString(3, normalize(address));
-                    if (bankLocked) {
-                        ps.setInt(4, userId);
-                    } else {
-                        ps.setString(4, normalize(bankCode));
-                        ps.setString(5, normalize(bankName));
-                        ps.setString(6, normalize(bankAccountNumber));
-                        ps.setString(7, normalizeAccountHolder(bankAccountHolder));
-                        ps.setInt(8, userId);
-                    }
-                    ps.executeUpdate();
-                }
-
-                conn.commit();
-                return true;
-            } catch (SQLException e) {
-                conn.rollback();
-                e.printStackTrace();
-            }
+            String address) {
+        String sql = "UPDATE dbo.Users SET FullName = ?, Phone = ?, Address = ?, UpdatedAt = SYSUTCDATETIME() "
+                + "WHERE UserID = ?";
+        try (Connection conn = DBContext.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, normalize(fullName));
+            ps.setString(2, normalize(phone));
+            ps.setString(3, normalize(address));
+            ps.setInt(4, userId);
+            return ps.executeUpdate() > 0;
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -286,8 +240,7 @@ public class UserDAO {
 
     public boolean updateUserByAdmin(User user) {
         String sql = "UPDATE dbo.Users SET Email = ?, FullName = ?, Phone = ?, Address = ?, "
-                + "IdentityNumber = ?, Status = ?, BankCode = ?, BankName = ?, "
-                + "BankAccountNumber = ?, BankAccountHolder = ?, UpdatedAt = SYSUTCDATETIME() "
+                + "IdentityNumber = ?, Status = ?, UpdatedAt = SYSUTCDATETIME() "
                 + "WHERE UserID = ?";
         try (Connection conn = DBContext.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -297,11 +250,7 @@ public class UserDAO {
             ps.setString(4, normalize(user.getAddress()));
             ps.setString(5, normalize(user.getIdentityNumber()));
             ps.setString(6, normalize(user.getStatus()));
-            ps.setString(7, normalize(user.getBankCode()));
-            ps.setString(8, normalize(user.getBankName()));
-            ps.setString(9, normalize(user.getBankAccountNumber()));
-            ps.setString(10, normalizeAccountHolder(user.getBankAccountHolder()));
-            ps.setInt(11, user.getUserId());
+            ps.setInt(7, user.getUserId());
             return ps.executeUpdate() > 0;
         } catch (SQLException e) {
             e.printStackTrace();
@@ -514,10 +463,6 @@ public class UserDAO {
         u.setAddress(rs.getString("Address"));
         u.setIdentityNumber(rs.getString("IdentityNumber"));
         u.setStatus(rs.getString("Status"));
-        u.setBankCode(readNullable(rs, "BankCode"));
-        u.setBankName(readNullable(rs, "BankName"));
-        u.setBankAccountNumber(readNullable(rs, "BankAccountNumber"));
-        u.setBankAccountHolder(readNullable(rs, "BankAccountHolder"));
         u.setEmailVerified(readBoolean(rs, "EmailVerified", true));
         u.setAuthProvider(readNullable(rs, "AuthProvider"));
         u.setAuthProviderSubject(readNullable(rs, "AuthProviderSubject"));
@@ -573,8 +518,4 @@ public class UserDAO {
         return value == null ? null : value.trim().replaceAll("\\s+", " ");
     }
 
-    private String normalizeAccountHolder(String value) {
-        String normalized = normalize(value);
-        return normalized == null ? null : normalized.toUpperCase(Locale.ROOT);
-    }
 }

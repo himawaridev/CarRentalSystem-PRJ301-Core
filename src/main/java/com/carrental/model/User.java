@@ -1,7 +1,6 @@
 package com.carrental.model;
 
 import java.time.LocalDateTime;
-import java.util.Locale;
 
 /**
  * Maps to dbo.Users table.
@@ -16,10 +15,6 @@ public class User {
     private String address;
     private String identityNumber;
     private String status;
-    private String bankCode;
-    private String bankName;
-    private String bankAccountNumber;
-    private String bankAccountHolder;
     private boolean emailVerified = true;
     private LocalDateTime emailVerifiedAt;
     private String authProvider;
@@ -64,37 +59,6 @@ public class User {
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
 
-    public String getBankCode() { return bankCode; }
-    public void setBankCode(String bankCode) { this.bankCode = normalize(bankCode); }
-
-    public String getBankName() { return bankName; }
-    public void setBankName(String bankName) { this.bankName = normalize(bankName); }
-
-    public String getBankAccountNumber() { return bankAccountNumber; }
-    public void setBankAccountNumber(String bankAccountNumber) { this.bankAccountNumber = normalize(bankAccountNumber); }
-
-    public String getBankAccountHolder() { return bankAccountHolder; }
-    public void setBankAccountHolder(String bankAccountHolder) { this.bankAccountHolder = normalizeAccountHolder(bankAccountHolder); }
-
-    public boolean hasRefundBankInfo() {
-        return !isBlank(bankCode)
-                && !isBlank(bankName)
-                && !isBlank(bankAccountNumber)
-                && !isBlank(bankAccountHolder);
-    }
-
-    public boolean getRefundBankInfo() {
-        return hasRefundBankInfo();
-    }
-
-    public boolean isBankInfoLocked() {
-        return !isBlank(bankAccountNumber);
-    }
-
-    public boolean getBankInfoLocked() {
-        return isBankInfoLocked();
-    }
-
     public boolean isEmailVerified() { return emailVerified; }
     public boolean getEmailVerified() { return emailVerified; }
     public void setEmailVerified(boolean emailVerified) { this.emailVerified = emailVerified; }
@@ -123,12 +87,4 @@ public class User {
         return value == null ? null : value.trim();
     }
 
-    private String normalizeAccountHolder(String value) {
-        String normalized = normalize(value);
-        return normalized == null ? null : normalized.toUpperCase(Locale.ROOT);
-    }
-
-    private boolean isBlank(String value) {
-        return value == null || value.isBlank();
-    }
 }
