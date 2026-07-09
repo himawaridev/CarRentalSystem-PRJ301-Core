@@ -5,6 +5,7 @@ Day la ban tach rieng cua du an CarRentalSystem de thuyet trinh/nop theo de bai 
 - Khach hang tim xe theo loai xe, so cho, thoi gian nhan/tra.
 - Khach hang xem thong tin xe va gia tien.
 - Khach hang tao hop dong thue xe.
+- Khach hang bam thanh toan demo noi bo de xac nhan dat coc va giu xe.
 - Mot hop dong co the chon nhieu xe khac nhau.
 - Cac xe trong cung hop dong dung chung ngay nhan va ngay tra.
 - Moi xe co the thue tu lai hoac co tai xe.
@@ -44,6 +45,7 @@ Nhung tinh nang ngoai de bai khong can thuyet trinh:
 - Chon mot hoac nhieu xe cho cung mot hop dong.
 - Chon thue xe tu lai hoac co tai xe.
 - Tao hop dong thue xe.
+- Thanh toan demo noi bo sau khi tao hop dong; khong can cau hinh cong thanh toan ngoai.
 - Xem danh sach hop dong cua minh.
 
 ### Staff
@@ -174,12 +176,12 @@ customer02/cust123
 1. Customer tim xe theo thoi gian va loai xe.
 2. Customer chon nhieu xe.
 3. Customer tao hop dong voi cung ngay nhan/tra.
-4. Staff xem hop dong va xu ly don.
-5. Manager xem/cap nhat xe va tai xe.
-6. Driver xem lich lai.
-7. Admin vao trang quan tri.
+4. Customer bam nut thanh toan demo de hop dong chuyen sang da giu xe.
+5. Staff xem hop dong va xu ly don.
+6. Manager xem/cap nhat xe va tai xe.
+7. Driver xem lich lai.
+8. Admin vao trang quan tri.
 
 ## Luu y khi thuyet trinh
 
 Chi can thuyet trinh cac chuc nang trong de bai. Neu trong source con mot so lop ho tro ky thuat hoac chuc nang mo rong, khong dua vao phan demo chinh.
-

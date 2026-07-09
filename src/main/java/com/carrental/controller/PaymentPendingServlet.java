@@ -55,6 +55,48 @@ public class PaymentPendingServlet extends HttpServlet {
         request.getRequestDispatcher("/WEB-INF/views/payment-pending.jsp").forward(request, response);
     }
 
+    @Override
+    protected void doPost(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        String ref = request.getParameter("ref");
+        if (ref == null || ref.isBlank()) {
+            response.sendRedirect(request.getContextPath() + "/my-contracts");
+            return;
+        }
+
+        HttpSession session = request.getSession(false);
+        User user = session == null ? null : (User) session.getAttribute("loggedInUser");
+        if (user == null) {
+            response.sendRedirect(request.getContextPath() + "/login?error=auth");
+            return;
+        }
+
+        PaymentDAO paymentDAO = new PaymentDAO();
+        PaymentTransaction paymentTransaction = paymentDAO.getTransactionByRef(ref);
+        if (paymentTransaction == null) {
+            session.setAttribute("flashError", "Khong tim thay giao dich thanh toan.");
+            response.sendRedirect(request.getContextPath() + "/my-contracts");
+            return;
+        }
+
+        ContractDAO contractDAO = new ContractDAO();
+        Contract contract = contractDAO.getContractById(paymentTransaction.getContractId());
+        if (contract == null || !canViewPayment(user, session, contract)) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Access denied");
+            return;
+        }
+
+        String paidRef = "DEMO-PAID-" + paymentTransaction.getProviderTransactionRef();
+        boolean paid = paymentDAO.confirmPaymentTransaction(paymentTransaction.getProviderTransactionRef(), paidRef);
+        if (paid) {
+            session.setAttribute("flashSuccess", "Thanh toan thanh cong. Hop dong da duoc giu xe.");
+        } else {
+            session.setAttribute("flashError", "Khong the xac nhan thanh toan. Giao dich co the da het han.");
+        }
+
+        response.sendRedirect(paymentReturnUrl(request, session, contract));
+    }
+
     private boolean canViewPayment(User user, HttpSession session, Contract contract) {
         if (hasStaffRole(session)) {
             return true;
