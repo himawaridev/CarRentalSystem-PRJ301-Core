@@ -1,24 +1,26 @@
 package com.carrental.dao;
 
-import com.carrental.service.PayOsGateway;
 import com.carrental.service.PaymentLinkRequest;
 import com.carrental.service.PaymentLinkResponse;
-import java.io.IOException;
 import java.sql.SQLException;
 
 final class PaymentGatewayLinkService {
+    private static final String DEMO_PROVIDER = "DEMO";
+
     private PaymentGatewayLinkService() {
     }
 
     static PaymentLinkResponse createPaymentLink(PaymentLinkRequest request) throws SQLException {
-        PayOsGateway gateway = new PayOsGateway();
-        try {
-            return gateway.createPaymentLink(request);
-        } catch (IOException | RuntimeException | InterruptedException e) {
-            if (e instanceof InterruptedException) {
-                Thread.currentThread().interrupt();
-            }
-            throw new SQLException("Cannot create real payment link from payOS: " + e.getMessage(), e);
+        if (request == null || request.getAmount() == null) {
+            throw new SQLException("Payment request is invalid.");
         }
+
+        PaymentLinkResponse response = new PaymentLinkResponse();
+        response.setProvider(DEMO_PROVIDER);
+        response.setPaymentLinkId("DEMO-" + request.getOrderCode());
+        response.setCheckoutUrl(null);
+        response.setQrCode(null);
+        response.setRawResponse("{\"provider\":\"DEMO\",\"message\":\"Internal demo payment\"}");
+        return response;
     }
 }
