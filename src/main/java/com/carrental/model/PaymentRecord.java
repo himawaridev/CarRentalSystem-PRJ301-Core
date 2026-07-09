@@ -52,8 +52,8 @@ public class PaymentRecord {
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 
     public String getDisplayMethod() {
-        if ("PAYOS".equalsIgnoreCase(provider)) {
-            return "PayOS QR";
+        if ("DEMO".equalsIgnoreCase(provider)) {
+            return "Thanh toan demo";
         }
         if ("BANK_TRANSFER".equalsIgnoreCase(paymentMethod)) {
             return "Chuyen khoan";
@@ -85,9 +85,6 @@ public class PaymentRecord {
         }
         if ("EXTRA_CHARGE".equalsIgnoreCase(paymentType)) {
             return "Phi phat sinh";
-        }
-        if ("REFUND".equalsIgnoreCase(paymentType)) {
-            return "Hoan coc";
         }
         return paymentType == null ? "" : paymentType;
     }

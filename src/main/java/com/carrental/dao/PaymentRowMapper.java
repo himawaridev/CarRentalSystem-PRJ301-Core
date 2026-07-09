@@ -3,8 +3,6 @@ package com.carrental.dao;
 import com.carrental.model.PaymentRecord;
 import com.carrental.model.PaymentStatus;
 import com.carrental.model.PaymentTransaction;
-import com.carrental.model.Refund;
-import com.carrental.model.RefundMethod;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -65,44 +63,5 @@ final class PaymentRowMapper {
             record.setCreatedAt(created.toLocalDateTime());
         }
         return record;
-    }
-
-    static Refund mapRefund(ResultSet rs) throws SQLException {
-        Refund refund = new Refund();
-        refund.setRefundId(rs.getLong("RefundID"));
-        refund.setContractId(rs.getLong("ContractID"));
-        refund.setSourcePaymentId(rs.getLong("SourcePaymentID"));
-        refund.setDepositAmount(rs.getBigDecimal("DepositAmount"));
-        refund.setDeductionAmount(rs.getBigDecimal("DeductionAmount"));
-        refund.setRefundAmount(rs.getBigDecimal("RefundAmount"));
-        refund.setReason(rs.getString("Reason"));
-        String refundMethod = rs.getString("RefundMethod");
-        if (refundMethod != null) {
-            refund.setRefundMethod(RefundMethod.valueOf(refundMethod));
-        }
-        refund.setProofOfRefund(rs.getString("ProofOfRefund"));
-        refund.setStatus(PaymentStatus.valueOf(rs.getString("Status")));
-        int approvedBy = rs.getInt("ApprovedByUserID");
-        if (!rs.wasNull()) {
-            refund.setApprovedByUserId(approvedBy);
-        }
-        int completedBy = rs.getInt("CompletedByUserID");
-        if (!rs.wasNull()) {
-            refund.setCompletedByUserId(completedBy);
-        }
-        refund.setProviderRefundRef(rs.getString("ProviderRefundRef"));
-        Timestamp completedAt = rs.getTimestamp("CompletedAt");
-        if (completedAt != null) {
-            refund.setCompletedAt(completedAt.toLocalDateTime());
-        }
-        Timestamp created = rs.getTimestamp("CreatedAt");
-        if (created != null) {
-            refund.setCreatedAt(created.toLocalDateTime());
-        }
-        Timestamp updated = rs.getTimestamp("UpdatedAt");
-        if (updated != null) {
-            refund.setUpdatedAt(updated.toLocalDateTime());
-        }
-        return refund;
     }
 }

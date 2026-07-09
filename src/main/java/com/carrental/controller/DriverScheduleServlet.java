@@ -43,7 +43,7 @@ public class DriverScheduleServlet extends HttpServlet {
 
         DriverDAO driverDAO = new DriverDAO();
         boolean ok = driverDAO.updateAssignmentStatus(assignmentId, newStatus);
-        session.setAttribute("flashSuccess", ok ? "Cập nhật trạng thái thành công!" : "Cập nhật thất bại!");
+        session.setAttribute("flashSuccess", ok ? "Cap nhat trang thai thanh cong!" : "Cap nhat that bai!");
 
         response.sendRedirect(request.getContextPath() + "/driver/schedule");
     }

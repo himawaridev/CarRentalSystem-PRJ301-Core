@@ -30,12 +30,6 @@
                             <c:when test="${contract.status == 'CANCELLED'}"><span class="badge-status badge-cancelled">Da huy</span></c:when>
                             <c:otherwise><span class="badge bg-secondary">${contract.status}</span></c:otherwise>
                         </c:choose>
-                        <c:if test="${refundCompleted}">
-                            <span class="badge-status badge-completed">Da hoan tien</span>
-                        </c:if>
-                        <c:if test="${refundPending}">
-                            <span class="badge-status badge-pending">Dang cho hoan tien</span>
-                        </c:if>
                     </div>
                     <table class="table table-borderless mb-0" style="font-size:.9rem">
                         <tr>
@@ -74,36 +68,6 @@
                             <span class="text-muted">Ngay tao hop dong:</span>
                             <span>${contract.createdAt}</span>
                         </div>
-                        <c:if test="${latestRefund != null}">
-                            <hr style="border-color:var(--border)">
-                            <div class="refund-summary-box ${refundCompleted ? 'completed' : 'pending'}">
-                                <div class="d-flex justify-content-between align-items-center gap-3 mb-2">
-                                    <span class="fw-bold">
-                                        <i class="bi ${refundCompleted ? 'bi-check2-circle' : 'bi-arrow-counterclockwise'} me-1"></i>
-                                        ${refundCompleted ? 'Da hoan tien' : 'Dang cho hoan tien'}
-                                    </span>
-                                    <strong>${latestRefundAmountText} VND</strong>
-                                </div>
-                                <div class="small text-muted">
-                                    Phuong thuc: ${latestRefund.refundMethod}
-                                </div>
-                                <c:if test="${not empty latestRefund.providerRefundRef}">
-                                    <div class="small text-muted">
-                                        Ma giao dich: ${latestRefund.providerRefundRef}
-                                    </div>
-                                </c:if>
-                                <c:if test="${not empty latestRefund.proofOfRefund}">
-                                    <div class="small text-muted">
-                                        Chung tu: ${latestRefund.proofOfRefund}
-                                    </div>
-                                </c:if>
-                                <c:if test="${latestRefund.completedAt != null}">
-                                    <div class="small text-muted">
-                                        Thoi gian hoan: ${latestRefund.completedAt}
-                                    </div>
-                                </c:if>
-                            </div>
-                        </c:if>
                     </div>
                 </div>
             </div>
@@ -226,20 +190,6 @@
             <c:if test="${contract.status == 'CANCELLED'}">
                 <div class="mt-3 text-danger">
                     <i class="bi bi-x-circle-fill me-1"></i>Hop dong nay da bi huy.
-                </div>
-            </c:if>
-            <c:if test="${refundCompleted}">
-                <div class="mt-3 text-success">
-                    <i class="bi bi-check2-circle me-1"></i>
-                    Da hoan tien <strong>${latestRefundAmountText} VND</strong>
-                    cho hop dong nay.
-                </div>
-            </c:if>
-            <c:if test="${refundPending}">
-                <div class="mt-3 text-warning">
-                    <i class="bi bi-arrow-counterclockwise me-1"></i>
-                    Yeu cau hoan tien <strong>${latestRefundAmountText} VND</strong>
-                    dang cho nhan vien xu ly.
                 </div>
             </c:if>
             <c:if test="${contract.status == 'PAYMENT_EXPIRED'}">

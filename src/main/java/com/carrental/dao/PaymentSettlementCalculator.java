@@ -20,8 +20,7 @@ final class PaymentSettlementCalculator {
             loadContractAmount(conn, result);
 
             BigDecimal depositPaid = sumPayments(conn, contractId,
-                    "PaymentType = N'DEPOSIT' AND PaymentStatus IN (N'PAID', N'REFUND_PENDING', N'PARTIALLY_REFUNDED', N'REFUNDED')");
-            BigDecimal refunded = PaymentRefundStore.sumRefundedAmount(conn, contractId);
+                    "PaymentType = N'DEPOSIT' AND PaymentStatus = N'PAID'");
             BigDecimal rentalPaid = sumPayments(conn, contractId,
                     "PaymentType IN (N'RENTAL_PREPAID', N'DRIVER_FEE_PREPAID', N'RENTAL_BALANCE') AND PaymentStatus = N'PAID'");
             BigDecimal extraTotal = sumPayments(conn, contractId,
@@ -29,21 +28,15 @@ final class PaymentSettlementCalculator {
             BigDecimal extraPaid = sumPayments(conn, contractId,
                     "PaymentType = N'EXTRA_CHARGE' AND PaymentStatus = N'PAID'");
 
-            BigDecimal depositHeld = PaymentAmounts.maxZero(depositPaid.subtract(refunded));
             BigDecimal unpaidRental = PaymentAmounts.maxZero(result.getExpectedRental().subtract(rentalPaid));
             BigDecimal cashOverRental = PaymentAmounts.maxZero(rentalPaid.subtract(result.getExpectedRental()));
             BigDecimal unsettledExtra = PaymentAmounts.maxZero(extraTotal.subtract(extraPaid).subtract(cashOverRental));
-            BigDecimal deduction = PaymentAmounts.min(depositHeld, unsettledExtra);
-            BigDecimal amountToCollect = PaymentAmounts.maxZero(unpaidRental.add(unsettledExtra).subtract(deduction));
-            BigDecimal refundAmount = PaymentAmounts.maxZero(depositHeld.subtract(deduction));
+            BigDecimal amountToCollect = PaymentAmounts.maxZero(unpaidRental.add(unsettledExtra));
 
             result.setDepositPaid(depositPaid);
             result.setRentalPaid(rentalPaid);
             result.setExtraCharge(unsettledExtra);
-            result.setDeductionAmount(deduction);
             result.setAmountToCollect(amountToCollect);
-            result.setRefundAmount(refundAmount);
-            result.setSourcePaymentId(PaymentRefundStore.findLatestDepositPaymentId(conn, contractId));
         } catch (SQLException e) {
             e.printStackTrace();
         }

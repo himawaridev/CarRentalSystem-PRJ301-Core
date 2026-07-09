@@ -57,8 +57,6 @@
             </thead>
             <tbody>
                 <c:forEach var="c" items="${contracts}">
-                    <c:set var="refundPreviewAmount" value="${cancellationRefundAmounts[c.contractId]}"/>
-                    <c:set var="refundedAmountText" value="${refundedRefundAmountTexts[c.contractId]}"/>
                     <tr>
                         <td>
                             <a href="${pageContext.request.contextPath}/staff/contract-detail?id=${c.contractId}"
@@ -85,38 +83,9 @@
                                 <c:when test="${c.status == 'CANCELLED'}"><span class="badge-status badge-cancelled">Da huy</span></c:when>
                                 <c:otherwise><span class="badge bg-secondary">${c.status}</span></c:otherwise>
                             </c:choose>
-                            <c:if test="${refundedContractIds.contains(c.contractId)}">
-                                <div class="mt-1">
-                                    <span class="badge-status badge-completed">
-                                        Da hoan ${refundedAmountText} VND
-                                    </span>
-                                </div>
-                            </c:if>
                         </td>
                         <td class="table-actions-cell">
                             <div class="table-action-icons staff-action-icons">
-                                <c:if test="${pendingRefundContractIds.contains(c.contractId) && c.status != 'CAR_RETURNED' && c.status != 'SETTLEMENT_PENDING'}">
-                                    <a href="${pageContext.request.contextPath}/staff/settlement?contractId=${c.contractId}"
-                                       class="btn btn-sm btn-outline-accent action-icon-btn"
-                                       data-bs-toggle="tooltip" data-bs-title="Xu ly hoan tien"
-                                       aria-label="Xu ly hoan tien">
-                                        <i class="bi bi-arrow-counterclockwise"></i>
-                                    </a>
-                                </c:if>
-                                <c:if test="${refundedContractIds.contains(c.contractId)}">
-                                    <span class="status-chip status-chip-success"
-                                          data-bs-toggle="tooltip" data-bs-title="Da hoan tien cho khach">
-                                        <i class="bi bi-check2-circle"></i>
-                                    </span>
-                                </c:if>
-                                <c:if test="${not empty refundPreviewAmount}">
-                                    <fmt:formatNumber var="refundPreviewText" value="${refundPreviewAmount}" pattern="#,###"/>
-                                    <span class="status-chip status-chip-waiting"
-                                          data-bs-toggle="tooltip"
-                                          data-bs-title="Da thanh toan ${refundPreviewText} VND. Khi huy se tao yeu cau hoan tien.">
-                                        <i class="bi bi-cash-coin"></i>
-                                    </span>
-                                </c:if>
                                 <c:if test="${c.status == 'PENDING_PAYMENT'}">
                                     <span class="status-chip status-chip-waiting"
                                           data-bs-toggle="tooltip" data-bs-title="Dang doi khach thanh toan">
@@ -168,11 +137,11 @@
                                 </c:if>
                                 <c:if test="${c.status == 'PENDING_PAYMENT' or c.status == 'RESERVED' or c.status == 'CONFIRMED'}">
                                     <form method="post" action="${pageContext.request.contextPath}/staff/process" style="display:inline"
-                                          onsubmit="return confirm('${not empty refundPreviewAmount ? 'Hop dong nay da co thanh toan. Khi huy, he thong se tao yeu cau hoan tien cho khach. Tiep tuc huy?' : 'Ban chac chan muon huy hop dong nay?'}')">
+                                          onsubmit="return confirm('Ban chac chan muon huy hop dong nay?')">
                                         <input type="hidden" name="contractId" value="${c.contractId}">
                                         <input type="hidden" name="action" value="cancel">
                                         <button class="btn btn-sm btn-outline-danger action-icon-btn"
-                                                data-bs-toggle="tooltip" data-bs-title="${not empty refundPreviewAmount ? 'Huy va tao yeu cau hoan tien' : 'Huy hop dong'}"
+                                                data-bs-toggle="tooltip" data-bs-title="Huy hop dong"
                                                 aria-label="Huy hop dong"><i class="bi bi-trash"></i></button>
                                     </form>
                                 </c:if>

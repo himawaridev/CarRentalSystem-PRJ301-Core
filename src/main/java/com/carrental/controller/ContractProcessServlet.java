@@ -1,10 +1,8 @@
 package com.carrental.controller;
 
 import com.carrental.dao.ContractDAO;
-import com.carrental.dao.PaymentDAO;
 import com.carrental.model.Contract;
 import com.carrental.model.ContractStatus;
-import com.carrental.model.Refund;
 import com.carrental.model.User;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -75,24 +73,12 @@ public class ContractProcessServlet extends HttpServlet {
             return;
         }
 
-        PaymentDAO paymentDAO = new PaymentDAO();
-        Refund refundBeforeCancel = paymentDAO.getPendingRefundByContractId(contractId);
-        boolean ok = paymentDAO.cancelContractWithRefund(
-                contractId,
-                user.getUserId(),
-                "Nhan vien huy hop dong. Tao yeu cau hoan tien neu khach da thanh toan.");
-        Refund refundAfterCancel = paymentDAO.getPendingRefundByContractId(contractId);
+        boolean ok = contractDAO.updateContractStatus(contractId, ContractStatus.CANCELLED, user.getUserId());
 
         if (!ok) {
             session.setAttribute("flashError",
                     "Khong the huy hop dong " + contract.getContractCode()
                     + ". Vui long kiem tra trang thai hien tai.");
-        } else if (refundAfterCancel != null) {
-            String refundMessage = refundBeforeCancel == null
-                    ? " Yeu cau hoan tien da duoc tao. Bam icon hoan tien de xu ly QR/chuyen khoan cho khach."
-                    : " Hop dong da co yeu cau hoan tien dang cho xu ly.";
-            session.setAttribute("flashSuccess",
-                    "Da huy hop dong " + contract.getContractCode() + "." + refundMessage);
         } else {
             session.setAttribute("flashSuccess",
                     "Da huy hop dong " + contract.getContractCode() + " thanh cong.");
