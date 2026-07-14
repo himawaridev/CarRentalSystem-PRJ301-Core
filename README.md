@@ -1,6 +1,5 @@
 # CarRentalSystem PRJ301 Core
 
-Day la ban tach rieng cua du an CarRentalSystem de thuyet trinh/nop theo de bai PRJ301. Ban nay chi tap trung vao cac chuc nang nam trong de:
 
 - Khach hang tim xe theo loai xe, so cho, thoi gian nhan/tra.
 - Khach hang xem thong tin xe va gia tien.
