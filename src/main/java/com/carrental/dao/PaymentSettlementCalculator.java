@@ -22,21 +22,12 @@ final class PaymentSettlementCalculator {
             BigDecimal depositPaid = sumPayments(conn, contractId,
                     "PaymentType = N'DEPOSIT' AND PaymentStatus = N'PAID'");
             BigDecimal rentalPaid = sumPayments(conn, contractId,
-                    "PaymentType IN (N'RENTAL_PREPAID', N'DRIVER_FEE_PREPAID', N'RENTAL_BALANCE') AND PaymentStatus = N'PAID'");
-            BigDecimal extraTotal = sumPayments(conn, contractId,
-                    "PaymentType = N'EXTRA_CHARGE' AND PaymentStatus NOT IN (N'FAILED', N'EXPIRED')");
-            BigDecimal extraPaid = sumPayments(conn, contractId,
-                    "PaymentType = N'EXTRA_CHARGE' AND PaymentStatus = N'PAID'");
-
-            BigDecimal unpaidRental = PaymentAmounts.maxZero(result.getExpectedRental().subtract(rentalPaid));
-            BigDecimal cashOverRental = PaymentAmounts.maxZero(rentalPaid.subtract(result.getExpectedRental()));
-            BigDecimal unsettledExtra = PaymentAmounts.maxZero(extraTotal.subtract(extraPaid).subtract(cashOverRental));
-            BigDecimal amountToCollect = PaymentAmounts.maxZero(unpaidRental.add(unsettledExtra));
+                    "PaymentType = N'RENTAL_BALANCE' AND PaymentStatus = N'PAID'");
+            BigDecimal unpaidRental = PaymentDAO.maxZero(result.getExpectedRental().subtract(rentalPaid));
 
             result.setDepositPaid(depositPaid);
             result.setRentalPaid(rentalPaid);
-            result.setExtraCharge(unsettledExtra);
-            result.setAmountToCollect(amountToCollect);
+            result.setAmountToCollect(unpaidRental);
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -61,7 +52,7 @@ final class PaymentSettlementCalculator {
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setLong(1, contractId);
             try (ResultSet rs = ps.executeQuery()) {
-                return rs.next() ? PaymentAmounts.safe(rs.getBigDecimal(1)) : BigDecimal.ZERO;
+                return rs.next() ? PaymentDAO.safe(rs.getBigDecimal(1)) : BigDecimal.ZERO;
             }
         }
     }

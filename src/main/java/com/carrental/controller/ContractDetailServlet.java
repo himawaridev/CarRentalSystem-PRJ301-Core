@@ -26,17 +26,34 @@ public class ContractDetailServlet extends HttpServlet {
             return;
         }
 
-        long contractId = Long.parseLong(idStr);
+        long contractId;
+        try {
+            contractId = Long.parseLong(idStr);
+            if (contractId <= 0) {
+                throw new NumberFormatException();
+            }
+        } catch (NumberFormatException e) {
+            response.sendRedirect(request.getContextPath() + "/my-contracts");
+            return;
+        }
         ContractDAO contractDAO = new ContractDAO();
         Contract contract = contractDAO.getContractById(contractId);
 
-        // Verify ownership
-        UserDAO userDAO = new UserDAO();
-        Integer customerId = userDAO.getCustomerIdByUserId(user.getUserId());
-
-        if (contract == null || customerId == null || contract.getCustomerId() != customerId) {
+        if (contract == null) {
             response.sendRedirect(request.getContextPath() + "/my-contracts");
             return;
+        }
+
+        @SuppressWarnings("unchecked")
+        List<String> roles = (List<String>) session.getAttribute("userRoles");
+        boolean staffView = roles != null
+                && (roles.contains("STAFF") || roles.contains("MANAGER") || roles.contains("ADMIN"));
+        if (!staffView) {
+            Integer customerId = new UserDAO().getCustomerIdByUserId(user.getUserId());
+            if (customerId == null || contract.getCustomerId() != customerId) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Access denied");
+                return;
+            }
         }
 
         // Get details with car info
@@ -55,6 +72,7 @@ public class ContractDetailServlet extends HttpServlet {
         request.setAttribute("contract", contract);
         request.setAttribute("details", details);
         request.setAttribute("driverAssignments", driverAssignments);
+        request.setAttribute("staffView", staffView);
 
         PaymentDAO paymentDAO = new PaymentDAO();
         request.setAttribute("paymentRecords", paymentDAO.getPaymentRecordsByContractId(contractId));

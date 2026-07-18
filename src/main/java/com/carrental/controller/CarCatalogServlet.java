@@ -7,6 +7,8 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
+import com.carrental.model.User;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.List;
@@ -17,6 +19,20 @@ public class CarCatalogServlet extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+        HttpSession session = request.getSession(false);
+        User loggedInUser = session == null ? null : (User) session.getAttribute("loggedInUser");
+        @SuppressWarnings("unchecked")
+        List<String> roles = session == null
+                ? List.of()
+                : (List<String>) session.getAttribute("userRoles");
+        boolean canBook = loggedInUser == null || (roles != null && roles.contains("CUSTOMER"));
+        request.setAttribute("canBook", canBook);
+        if (!canBook) {
+            request.setAttribute("bookingRoleMessage",
+                    "Ban dang dang nhap bang tai khoan quan tri/nhan vien. "
+                    + "Vui long dung tai khoan khach hang de dat xe.");
+        }
+
         CarDAO carDAO = new CarDAO();
         List<Car> allCars = carDAO.getAllCars();
 

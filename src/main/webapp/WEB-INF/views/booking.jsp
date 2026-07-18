@@ -25,7 +25,8 @@
                             <div class="fw-bold">${returnAt}</div>
                         </div>
                     </div>
-                    <div class="mt-2 text-accent">So ngay uoc tinh: <strong>${days}</strong> ngay</div>
+                    <div class="mt-2 text-accent">So ngay tinh phi: <strong>${days}</strong> ngay</div>
+                    <div class="text-muted small mt-1">Thue duoi 24 gio van ap dung muc phi toi thieu 1 ngay.</div>
                 </div>
             </div>
 
@@ -105,38 +106,12 @@
                             </div>
                         </div>
 
-                        <div class="divider"></div>
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="payment-option">
-                                    <input class="form-check-input" type="radio" name="paymentMode"
-                                           value="DEPOSIT_ONLY"
-                                           ${paymentMode != 'FULL_PREPAYMENT' ? 'checked' : ''}>
-                                    <span>
-                                        <strong>Thanh toan coc</strong>
-                                        <small>Giu xe truoc, tien thue thanh toan sau</small>
-                                    </span>
-                                </label>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="payment-option">
-                                    <input class="form-check-input" type="radio" name="paymentMode"
-                                           value="FULL_PREPAYMENT"
-                                           ${paymentMode == 'FULL_PREPAYMENT' ? 'checked' : ''}>
-                                    <span>
-                                        <strong>Thanh toan toan bo</strong>
-                                        <small>Coc + tien xe + phi tai xe neu co</small>
-                                    </span>
-                                </label>
-                            </div>
-                        </div>
-
                         <div class="btn-action-group justify-content-end mt-4">
                             <a href="${pageContext.request.contextPath}/search" class="btn btn-outline-accent btn-action-nowrap">
                                 <i class="bi bi-arrow-left me-1"></i>Quay lai
                             </a>
                             <button type="submit" class="btn btn-accent btn-action-nowrap px-4">
-                                <i class="bi bi-credit-card me-1"></i>Tiep tuc thanh toan
+                                <i class="bi bi-file-earmark-check me-1"></i>Tao hop dong
                             </button>
                         </div>
                     </form>
@@ -172,19 +147,13 @@
                     <div class="divider"></div>
                     <div class="d-flex justify-content-between mb-2"
                          id="bookingSummary"
-                         data-deposit="${totalDeposit}"
-                         data-rental="${totalRental}"
                          data-driver-fee-per-car="${driverFeePerCar}">
-                        <span class="fw-bold" id="summaryRequiredPaymentLabel">Can thanh toan de giu xe:</span>
+                        <span class="fw-bold" id="summaryRequiredPaymentLabel">Tien coc tra tai quay:</span>
                         <span class="car-price" id="summaryRequiredPayment"><fmt:formatNumber value="${totalDeposit}" pattern="#,###"/> VND</span>
                     </div>
-                    <div class="d-flex justify-content-between small text-muted">
-                        <span>Neu tra toan bo:</span>
-                        <span id="summaryFullPrepayment"><fmt:formatNumber value="${fullPrepaymentTotal}" pattern="#,###"/> VND</span>
-                    </div>
                     <div class="mt-3 p-2 bg-accent-soft rounded text-center small">
-                        <i class="bi bi-info-circle me-1 text-accent"></i>
-                        He thong chi giu xe sau khi thanh toan coc thanh cong.
+                        <i class="bi bi-cash-coin me-1 text-accent"></i>
+                        Thanh toan tien coc truc tiep bang tien mat cho nhan vien.
                     </div>
                 </div>
             </div>

@@ -30,12 +30,6 @@
                     <p class="footer-desc">
                         Dich vu cho thue xe o to hang dau Viet Nam. Uy tin, chat luong, gia ca hop ly voi hon 100+ xe da dang phuc vu moi nhu cau cua ban.
                     </p>
-                    <div class="footer-socials">
-                        <a href="#" title="Facebook"><i class="bi bi-facebook"></i></a>
-                        <a href="#" title="Instagram"><i class="bi bi-instagram"></i></a>
-                        <a href="#" title="Youtube"><i class="bi bi-youtube"></i></a>
-                        <a href="#" title="Tiktok"><i class="bi bi-tiktok"></i></a>
-                    </div>
                 </div>
 
                 <!-- Quick Links -->
@@ -162,31 +156,6 @@
     margin-bottom: 20px;
     max-width: 320px;
 }
-#siteFooter .footer-socials {
-    display: flex;
-    gap: 8px;
-}
-#siteFooter .footer-socials a {
-    width: 38px;
-    height: 38px;
-    border-radius: 10px;
-    background: rgba(255,255,255,.05);
-    border: 1px solid rgba(255,255,255,.1);
-    color: #94a3b8;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1rem;
-    transition: all .25s ease;
-    text-decoration: none;
-}
-#siteFooter .footer-socials a:hover {
-    background: #2563eb;
-    border-color: #2563eb;
-    color: #fff;
-    transform: translateY(-3px);
-    box-shadow: 0 4px 12px rgba(37,99,235,.4);
-}
 #siteFooter .footer-heading {
     font-size: .8rem;
     font-weight: 700;
@@ -264,7 +233,6 @@
 </style>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     if (window.bootstrap && bootstrap.Tooltip) {
@@ -276,85 +244,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    window.__carRentalSwipers = window.__carRentalSwipers || [];
-
-    document.querySelectorAll('[data-slider="car-images"], [data-slider="brand-images"]').forEach(function(slider) {
-        if (slider.dataset.initialized === 'true') {
-            return;
-        }
-        slider.dataset.initialized = 'true';
-
-        if (typeof Swiper === 'undefined') {
-            startFallbackSlider(slider);
-            return;
-        }
-
-        var instance = new Swiper(slider, {
-            slidesPerView: 1,
-            loop: true,
-            allowTouchMove: true,
-            grabCursor: true,
-            watchOverflow: true,
-            speed: 600,
-            autoplay: {
-                delay: 3000,
-                disableOnInteraction: false
-            },
-            pagination: {
-                el: slider.querySelector('.swiper-pagination'),
-                clickable: true
-            }
-        });
-        slider.swiperInstance = instance;
-        window.__carRentalSwipers.push(instance);
-
-        window.setTimeout(function() {
-            if (!instance || slider.querySelectorAll('.swiper-slide').length <= 1) {
-                return;
-            }
-            if (instance.autoplay && instance.autoplay.running) {
-                return;
-            }
-            window.setInterval(function() {
-                if (!document.hidden && typeof instance.slideNext === 'function') {
-                    instance.slideNext();
-                }
-            }, 3000);
-        }, 3200);
-    });
-
-    function startFallbackSlider(slider) {
-        var slides = Array.from(slider.querySelectorAll('.swiper-slide'));
-        if (slides.length <= 1) {
-            return;
-        }
-        var index = 0;
-        var touchStartX = null;
-        function showSlide(nextIndex) {
-            slides[index].style.display = 'none';
-            index = (nextIndex + slides.length) % slides.length;
-            slides[index].style.display = 'block';
-        }
-        slides.forEach(function(slide, slideIndex) {
-            slide.style.display = slideIndex === 0 ? 'block' : 'none';
-        });
-        window.setInterval(function() {
-            showSlide(index + 1);
-        }, 3000);
-        slider.addEventListener('touchstart', function(event) {
-            touchStartX = event.touches && event.touches.length ? event.touches[0].clientX : null;
-        }, { passive: true });
-        slider.addEventListener('touchend', function(event) {
-            if (touchStartX === null || !event.changedTouches || !event.changedTouches.length) {
-                return;
-            }
-            var deltaX = event.changedTouches[0].clientX - touchStartX;
-            if (Math.abs(deltaX) > 32) {
-                showSlide(deltaX < 0 ? index + 1 : index - 1);
-            }
-            touchStartX = null;
-        }, { passive: true });
-    }
 });
 </script>
 </body>

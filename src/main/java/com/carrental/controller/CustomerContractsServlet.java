@@ -1,11 +1,9 @@
 package com.carrental.controller;
 
 import com.carrental.dao.ContractDAO;
-import com.carrental.dao.PaymentDAO;
 import com.carrental.dao.UserDAO;
 import com.carrental.model.Contract;
 import com.carrental.model.ContractStatus;
-import com.carrental.model.PaymentTransaction;
 import com.carrental.model.User;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -14,9 +12,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 @WebServlet("/my-contracts")
 public class CustomerContractsServlet extends HttpServlet {
@@ -35,15 +31,6 @@ public class CustomerContractsServlet extends HttpServlet {
             List<Contract> contracts = contractDAO.getContractsByCustomerId(customerId);
             request.setAttribute("contracts", contracts);
 
-            PaymentDAO paymentDAO = new PaymentDAO();
-            Map<Long, String> pendingPaymentRefs = new HashMap<>();
-            for (Contract contract : contracts) {
-                PaymentTransaction tx = paymentDAO.getLatestPendingTransactionByContractId(contract.getContractId());
-                if (tx != null && ContractStatus.PENDING_PAYMENT.equals(contract.getStatus())) {
-                    pendingPaymentRefs.put(contract.getContractId(), tx.getProviderTransactionRef());
-                }
-            }
-            request.setAttribute("pendingPaymentRefs", pendingPaymentRefs);
         }
 
         String flash = (String) session.getAttribute("flashSuccess");
@@ -68,7 +55,17 @@ public class CustomerContractsServlet extends HttpServlet {
         String action = request.getParameter("action");
 
         if ("cancel".equals(action)) {
-            long contractId = Long.parseLong(request.getParameter("contractId"));
+            long contractId;
+            try {
+                contractId = Long.parseLong(request.getParameter("contractId"));
+                if (contractId <= 0) {
+                    throw new NumberFormatException();
+                }
+            } catch (NumberFormatException e) {
+                session.setAttribute("flashError", "Ma hop dong khong hop le.");
+                response.sendRedirect(request.getContextPath() + "/my-contracts");
+                return;
+            }
             ContractDAO contractDAO = new ContractDAO();
             Contract contract = contractDAO.getContractById(contractId);
 

@@ -13,65 +13,98 @@
     </div>
 </div>
 
-<div class="container py-4 ${not empty cars ? 'catalog-content-has-fixed-selection' : ''}">
+<div class="container py-4 ${not empty cars && canBook ? 'catalog-content-has-fixed-selection' : ''}">
 
     <!-- Filters -->
-    <div class="catalog-filter-bar mb-4">
-        <c:if test="${not empty catalogError}">
-            <div class="alert alert-custom-error mb-3">${catalogError}</div>
-        </c:if>
-        <form method="get" action="${pageContext.request.contextPath}/cars" class="d-flex flex-wrap gap-3 align-items-end">
-            <div>
-                <label class="form-label small fw-bold text-muted">SO CHO</label>
-                <select name="seats" class="form-select form-select-sm" style="width:160px">
-                    <option value="">Tat ca</option>
-                    <c:forEach var="s" items="${seatCounts}">
-                        <option value="${s}" ${seatFilter == s ? 'selected' : ''}>${s} cho</option>
-                    </c:forEach>
-                </select>
+    <div class="search-card catalog-search-card mx-auto mb-4">
+        <div class="search-card-header">
+            <div class="search-card-heading">
+                <span class="search-heading-icon"><i class="bi bi-funnel"></i></span>
+                <div>
+                    <div class="search-heading-title">Loc danh sach xe</div>
+                    <div class="search-heading-note">Tim nhanh theo dac diem va muc gia</div>
+                </div>
             </div>
-            <div>
-                <label class="form-label small fw-bold text-muted">HANG XE</label>
-                <select name="brand" class="form-select form-select-sm" style="width:160px">
-                    <option value="">Tat ca</option>
-                    <c:forEach var="b" items="${brands}">
-                        <option value="${b}" ${brandFilter == b ? 'selected' : ''}>${b}</option>
-                    </c:forEach>
-                </select>
-            </div>
-            <div>
-                <label class="form-label small fw-bold text-muted">TRANG THAI</label>
-                <select name="status" class="form-select form-select-sm" style="width:160px">
-                    <option value="">Tat ca</option>
-                    <option value="AVAILABLE" ${statusFilter == 'AVAILABLE' ? 'selected' : ''}>San sang</option>
-                    <option value="MAINTENANCE" ${statusFilter == 'MAINTENANCE' ? 'selected' : ''}>Bao tri</option>
-                </select>
-            </div>
-            <div>
-                <label class="form-label small fw-bold text-muted">GIA TU</label>
-                <input type="number" min="0" step="1000" name="minPrice" value="${minPrice}"
-                       class="form-control form-control-sm" style="width:150px" placeholder="VD: 500000">
-            </div>
-            <div>
-                <label class="form-label small fw-bold text-muted">GIA DEN</label>
-                <input type="number" min="0" step="1000" name="maxPrice" value="${maxPrice}"
-                       class="form-control form-control-sm" style="width:150px" placeholder="VD: 1500000">
-            </div>
-            <div>
-                <button type="submit" class="btn btn-accent btn-sm px-4">
-                    <i class="bi bi-funnel me-1"></i>Loc
-                </button>
-                <a href="${pageContext.request.contextPath}/cars" class="btn btn-outline-accent btn-sm px-3">
-                    <i class="bi bi-arrow-counterclockwise"></i>
-                </a>
-            </div>
-            <div class="ms-auto">
-                <span class="text-muted small"><i class="bi bi-car-front me-1"></i>Hien thi <strong>${cars.size()}</strong> xe</span>
-            </div>
-        </form>
+        </div>
+        <div class="search-card-body">
+            <c:if test="${not empty bookingRoleMessage}">
+                <div class="alert alert-custom-error mb-3">${bookingRoleMessage}</div>
+            </c:if>
+            <c:if test="${not empty catalogError}">
+                <div class="alert alert-custom-error mb-3">${catalogError}</div>
+            </c:if>
+            <form method="get" action="${pageContext.request.contextPath}/cars" id="catalogFilterForm">
+                <fieldset class="search-filter-group">
+                    <legend class="search-filter-title">
+                        <span class="search-filter-icon vehicle"><i class="bi bi-car-front"></i></span>
+                        Xe va ngan sach
+                    </legend>
+                    <div class="catalog-filter-grid">
+                        <div class="search-field">
+                            <label class="form-label" for="catalogBrand">Thuong hieu</label>
+                            <select name="brand" id="catalogBrand" class="form-select">
+                                <option value="">Tat ca hang xe</option>
+                                <c:forEach var="b" items="${brands}">
+                                    <option value="${b}" ${brandFilter == b ? 'selected' : ''}>${b}</option>
+                                </c:forEach>
+                            </select>
+                        </div>
+                        <div class="search-field">
+                            <label class="form-label" for="catalogSeats">So cho</label>
+                            <select name="seats" id="catalogSeats" class="form-select">
+                                <option value="">Tat ca so cho</option>
+                                <c:forEach var="s" items="${seatCounts}">
+                                    <option value="${s}" ${seatFilter == s ? 'selected' : ''}>${s} cho ngoi</option>
+                                </c:forEach>
+                            </select>
+                        </div>
+                        <div class="search-field">
+                            <label class="form-label" for="catalogStatus">Trang thai</label>
+                            <select name="status" id="catalogStatus" class="form-select">
+                                <option value="">Tat ca trang thai</option>
+                                <option value="AVAILABLE" ${statusFilter == 'AVAILABLE' ? 'selected' : ''}>San sang</option>
+                                <option value="MAINTENANCE" ${statusFilter == 'MAINTENANCE' ? 'selected' : ''}>Bao tri</option>
+                            </select>
+                        </div>
+                        <div class="search-field">
+                            <label class="form-label" for="catalogMinPrice">Gia toi thieu</label>
+                            <div class="search-input-affix">
+                                <input type="number" min="0" step="1000" name="minPrice" id="catalogMinPrice"
+                                       value="${minPrice}" class="form-control" placeholder="500.000">
+                                <span>VND</span>
+                            </div>
+                        </div>
+                        <div class="search-field">
+                            <label class="form-label" for="catalogMaxPrice">Gia toi da</label>
+                            <div class="search-input-affix">
+                                <input type="number" min="0" step="1000" name="maxPrice" id="catalogMaxPrice"
+                                       value="${maxPrice}" class="form-control" placeholder="1.500.000">
+                                <span>VND</span>
+                            </div>
+                        </div>
+                    </div>
+                </fieldset>
+                <div class="catalog-filter-actions">
+                    <div class="catalog-result-count">
+                        <i class="bi bi-car-front"></i>
+                        <span>Hien thi <strong>${cars.size()}</strong> xe</span>
+                    </div>
+                    <div class="catalog-filter-buttons">
+                        <a href="${pageContext.request.contextPath}/cars" class="btn btn-outline-accent catalog-reset-btn"
+                           title="Dat lai bo loc" aria-label="Dat lai bo loc">
+                            <i class="bi bi-arrow-counterclockwise"></i>
+                        </a>
+                        <button type="submit" class="btn btn-accent btn-action-nowrap catalog-filter-submit">
+                            <i class="bi bi-funnel"></i>
+                            <span>Ap dung bo loc</span>
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
     </div>
 
-    <c:if test="${not empty cars}">
+    <c:if test="${not empty cars && canBook}">
         <div class="catalog-selection-bar catalog-selection-fixed">
             <div>
                 <span class="text-muted small">Xe da chon</span>
@@ -133,7 +166,7 @@
                                     <i class="bi bi-upc-scan me-1"></i>${car.licensePlate}
                                 </div>
                             </div>
-                            <c:if test="${car.status == 'AVAILABLE'}">
+                            <c:if test="${car.status == 'AVAILABLE' && canBook}">
                                 <div class="form-check m-0">
                                     <input class="form-check-input catalog-car-checkbox" type="checkbox"
                                            id="selectCar-${car.carId}" value="${car.carId}"
@@ -196,7 +229,7 @@
                                     Dat coc: <fmt:formatNumber value="${car.depositAmount}" pattern="#,###"/> VND
                                 </div>
                             </div>
-                            <c:if test="${car.status == 'AVAILABLE'}">
+                            <c:if test="${car.status == 'AVAILABLE' && canBook}">
                                 <button type="button" class="btn btn-accent btn-action-nowrap btn-sm catalog-select-btn"
                                         id="selectBtn-${car.carId}" onclick="toggleCatalogSelection(${car.carId})">
                                     <i class="bi bi-check2-square"></i><span>Chon</span>
@@ -210,6 +243,7 @@
     </div>
 </div>
 
+<c:if test="${canBook}">
 <!-- Booking Modal -->
 <div class="modal fade" id="bookingModal" tabindex="-1">
     <div class="modal-dialog">
@@ -313,8 +347,12 @@ function openBookingModal() {
     pickup.setHours(8, 0, 0, 0);
     var ret = new Date(pickup.getTime() + 24*60*60*1000);
 
-    document.getElementById('modalPickup').value = formatDT(pickup);
-    document.getElementById('modalReturn').value = formatDT(ret);
+    var pickupInput = document.getElementById('modalPickup');
+    var returnInput = document.getElementById('modalReturn');
+    pickupInput.min = formatDT(now);
+    pickupInput.value = formatDT(pickup);
+    returnInput.min = formatDT(new Date(pickup.getTime() + 60*1000));
+    returnInput.value = formatDT(ret);
 
     var modal = new bootstrap.Modal(document.getElementById('bookingModal'));
     modal.show();
@@ -330,15 +368,29 @@ function formatDT(d) {
 
 // Validate return > pickup
 document.getElementById('directBookForm').addEventListener('submit', function(e) {
-    var p = new Date(document.getElementById('modalPickup').value);
+    var now = new Date();
+    now.setSeconds(0, 0);
+    var pickupInput = document.getElementById('modalPickup');
+    var p = new Date(pickupInput.value);
     var r = new Date(document.getElementById('modalReturn').value);
+    if (p < now) {
+        e.preventDefault();
+        alert('Thoi gian nhan xe khong duoc nam trong qua khu!');
+        return;
+    }
     if (r <= p) {
         e.preventDefault();
         alert('Ngay tra xe phai sau ngay nhan xe!');
     }
 });
 
+document.getElementById('modalPickup').addEventListener('change', function() {
+    var pickup = new Date(this.value);
+    document.getElementById('modalReturn').min = formatDT(new Date(pickup.getTime() + 60*1000));
+});
+
 updateCatalogSelection();
 </script>
+</c:if>
 
 <jsp:include page="/WEB-INF/includes/footer.jsp"/>

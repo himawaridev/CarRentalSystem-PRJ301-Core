@@ -19,7 +19,7 @@
             <a href="${pageContext.request.contextPath}/staff/dashboard"
                class="btn ${empty statusFilter ? 'btn-accent' : 'btn-outline-accent'} btn-action-nowrap btn-sm">Tat ca</a>
             <a href="${pageContext.request.contextPath}/staff/dashboard?status=PENDING_PAYMENT"
-               class="btn ${statusFilter == 'PENDING_PAYMENT' ? 'btn-accent' : 'btn-outline-accent'} btn-action-nowrap btn-sm">Cho thanh toan</a>
+               class="btn ${statusFilter == 'PENDING_PAYMENT' ? 'btn-accent' : 'btn-outline-accent'} btn-action-nowrap btn-sm">Cho thu coc</a>
             <a href="${pageContext.request.contextPath}/staff/dashboard?status=RESERVED"
                class="btn ${statusFilter == 'RESERVED' ? 'btn-accent' : 'btn-outline-accent'} btn-action-nowrap btn-sm">Da giu xe</a>
             <a href="${pageContext.request.contextPath}/staff/dashboard?status=CONFIRMED"
@@ -28,8 +28,6 @@
                class="btn ${statusFilter == 'CAR_PICKED_UP' ? 'btn-accent' : 'btn-outline-accent'} btn-action-nowrap btn-sm">Da nhan xe</a>
             <a href="${pageContext.request.contextPath}/staff/dashboard?status=CAR_RETURNED"
                class="btn ${statusFilter == 'CAR_RETURNED' ? 'btn-accent' : 'btn-outline-accent'} btn-action-nowrap btn-sm">Da tra xe</a>
-            <a href="${pageContext.request.contextPath}/staff/dashboard?status=SETTLEMENT_PENDING"
-               class="btn ${statusFilter == 'SETTLEMENT_PENDING' ? 'btn-accent' : 'btn-outline-accent'} btn-action-nowrap btn-sm">Dang quyet toan</a>
         </div>
     </div>
 
@@ -59,7 +57,7 @@
                 <c:forEach var="c" items="${contracts}">
                     <tr>
                         <td>
-                            <a href="${pageContext.request.contextPath}/staff/contract-detail?id=${c.contractId}"
+                            <a href="${pageContext.request.contextPath}/contract-detail?id=${c.contractId}"
                                class="text-accent fw-bold">${c.contractCode}</a>
                         </td>
                         <td>
@@ -72,13 +70,11 @@
                         <td><fmt:formatNumber value="${c.finalAmountDue}" pattern="#,###"/></td>
                         <td class="table-status-cell">
                             <c:choose>
-                                <c:when test="${c.status == 'PENDING_PAYMENT'}"><span class="badge-status badge-pending">Cho thanh toan</span></c:when>
-                                <c:when test="${c.status == 'PAYMENT_EXPIRED'}"><span class="badge-status badge-rejected">Het han</span></c:when>
+                                <c:when test="${c.status == 'PENDING_PAYMENT'}"><span class="badge-status badge-pending">Cho thu coc tien mat</span></c:when>
                                 <c:when test="${c.status == 'RESERVED'}"><span class="badge-status badge-deposit">Da giu xe</span></c:when>
                                 <c:when test="${c.status == 'CONFIRMED'}"><span class="badge-status badge-accepted">Da xac nhan</span></c:when>
                                 <c:when test="${c.status == 'CAR_PICKED_UP'}"><span class="badge-status badge-picked">Da nhan xe</span></c:when>
                                 <c:when test="${c.status == 'CAR_RETURNED'}"><span class="badge-status badge-returned">Da tra xe</span></c:when>
-                                <c:when test="${c.status == 'SETTLEMENT_PENDING'}"><span class="badge-status badge-pending">Dang quyet toan</span></c:when>
                                 <c:when test="${c.status == 'COMPLETED'}"><span class="badge-status badge-completed">Hoan tat</span></c:when>
                                 <c:when test="${c.status == 'CANCELLED'}"><span class="badge-status badge-cancelled">Da huy</span></c:when>
                                 <c:otherwise><span class="badge bg-secondary">${c.status}</span></c:otherwise>
@@ -87,10 +83,14 @@
                         <td class="table-actions-cell">
                             <div class="table-action-icons staff-action-icons">
                                 <c:if test="${c.status == 'PENDING_PAYMENT'}">
-                                    <span class="status-chip status-chip-waiting"
-                                          data-bs-toggle="tooltip" data-bs-title="Dang doi khach thanh toan">
-                                        <i class="bi bi-hourglass-split"></i>
-                                    </span>
+                                    <form method="post" action="${pageContext.request.contextPath}/staff/process" style="display:inline"
+                                          onsubmit="return confirm('Xac nhan da nhan du tien coc bang tien mat?')">
+                                        <input type="hidden" name="contractId" value="${c.contractId}">
+                                        <input type="hidden" name="action" value="confirm_cash_deposit">
+                                        <button class="btn btn-sm btn-outline-accent action-icon-btn"
+                                                data-bs-toggle="tooltip" data-bs-title="Da thu coc tien mat"
+                                                aria-label="Da thu coc tien mat"><i class="bi bi-cash-coin"></i></button>
+                                    </form>
                                 </c:if>
                                 <c:if test="${c.status == 'RESERVED'}">
                                     <form method="post" action="${pageContext.request.contextPath}/staff/process" style="display:inline">
@@ -125,14 +125,6 @@
                                        data-bs-toggle="tooltip" data-bs-title="Quyet toan"
                                        aria-label="Quyet toan">
                                         <i class="bi bi-cash-stack"></i>
-                                    </a>
-                                </c:if>
-                                <c:if test="${c.status == 'SETTLEMENT_PENDING'}">
-                                    <a href="${pageContext.request.contextPath}/staff/settlement?contractId=${c.contractId}"
-                                       class="btn btn-sm btn-outline-accent action-icon-btn"
-                                       data-bs-toggle="tooltip" data-bs-title="Xem quyet toan"
-                                       aria-label="Xem quyet toan">
-                                        <i class="bi bi-receipt"></i>
                                     </a>
                                 </c:if>
                                 <c:if test="${c.status == 'PENDING_PAYMENT' or c.status == 'RESERVED' or c.status == 'CONFIRMED'}">

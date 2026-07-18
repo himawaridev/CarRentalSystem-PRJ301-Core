@@ -1,20 +1,20 @@
 package com.carrental.controller;
 
 import com.carrental.dao.CarDAO;
-import com.carrental.model.Car;
 import com.carrental.model.CarGroup;
+import com.carrental.service.RentalPeriodValidator;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 @WebServlet("/search")
 public class CarSearchServlet extends HttpServlet {
@@ -73,6 +73,12 @@ public class CarSearchServlet extends HttpServlet {
             return;
         }
 
+        if (RentalPeriodValidator.isPickupInPast(pickupAt)) {
+            request.setAttribute("error", "Thoi gian nhan xe khong duoc nam trong qua khu.");
+            forwardSearch(request, response);
+            return;
+        }
+
         if (!returnAt.isAfter(pickupAt)) {
             request.setAttribute("error", "Ngay tra xe phai sau ngay nhan xe!");
             forwardSearch(request, response);
@@ -94,11 +100,19 @@ public class CarSearchServlet extends HttpServlet {
 
     private void forwardSearch(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+        HttpSession session = request.getSession(false);
+        if (session != null && request.getAttribute("error") == null) {
+            String flashError = (String) session.getAttribute("flashError");
+            if (flashError != null) {
+                request.setAttribute("error", flashError);
+                session.removeAttribute("flashError");
+            }
+        }
         CarDAO carDAO = new CarDAO();
-        List<Car> featuredCars = carDAO.getCatalogCarGroups();
+        request.setAttribute("minimumPickupAt", LocalDateTime.now()
+                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm")));
         request.setAttribute("brands", carDAO.getAvailableBrands());
         request.setAttribute("seatCounts", carDAO.getAvailableSeatCounts());
-        request.setAttribute("featuredBrandGroups", groupCarsByBrand(featuredCars));
         request.getRequestDispatcher("/WEB-INF/views/search.jsp").forward(request, response);
     }
 
@@ -128,15 +142,4 @@ public class CarSearchServlet extends HttpServlet {
         return value == null ? null : value.trim();
     }
 
-    private Map<String, List<Car>> groupCarsByBrand(List<Car> cars) {
-        Map<String, List<Car>> groups = new LinkedHashMap<>();
-        for (Car car : cars) {
-            String brand = normalize(car.getBrand());
-            if (brand == null || brand.isBlank()) {
-                brand = "Khac";
-            }
-            groups.computeIfAbsent(brand, key -> new java.util.ArrayList<>()).add(car);
-        }
-        return groups;
-    }
 }

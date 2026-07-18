@@ -60,17 +60,6 @@ public final class PasswordHasher {
                 storedValue.getBytes(StandardCharsets.UTF_8));
     }
 
-    public static String randomNumericCode() {
-        int code = 100_000 + RANDOM.nextInt(900_000);
-        return Integer.toString(code);
-    }
-
-    public static String randomUrlToken() {
-        byte[] bytes = new byte[32];
-        RANDOM.nextBytes(bytes);
-        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
-    }
-
     private static byte[] pbkdf2(String secret, byte[] salt, int iterations) {
         try {
             KeySpec spec = new PBEKeySpec(

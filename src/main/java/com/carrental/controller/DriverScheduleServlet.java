@@ -30,6 +30,8 @@ public class DriverScheduleServlet extends HttpServlet {
 
         String flash = (String) session.getAttribute("flashSuccess");
         if (flash != null) { request.setAttribute("success", flash); session.removeAttribute("flashSuccess"); }
+        String error = (String) session.getAttribute("flashError");
+        if (error != null) { request.setAttribute("error", error); session.removeAttribute("flashError"); }
 
         request.getRequestDispatcher("/WEB-INF/views/driver-schedule.jsp").forward(request, response);
     }
@@ -38,12 +40,24 @@ public class DriverScheduleServlet extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         HttpSession session = request.getSession();
-        long assignmentId = Long.parseLong(request.getParameter("assignmentId"));
+        User user = (User) session.getAttribute("loggedInUser");
+        Integer driverId = new UserDAO().getDriverIdByUserId(user.getUserId());
+        long assignmentId;
+        try {
+            assignmentId = Long.parseLong(request.getParameter("assignmentId"));
+        } catch (NumberFormatException | NullPointerException e) {
+            session.setAttribute("flashError", "Thong tin lich lai khong hop le.");
+            response.sendRedirect(request.getContextPath() + "/driver/schedule");
+            return;
+        }
         String newStatus = request.getParameter("status");
 
         DriverDAO driverDAO = new DriverDAO();
-        boolean ok = driverDAO.updateAssignmentStatus(assignmentId, newStatus);
-        session.setAttribute("flashSuccess", ok ? "Cap nhat trang thai thanh cong!" : "Cap nhat that bai!");
+        boolean ok = driverId != null
+                && driverDAO.updateAssignmentStatus(assignmentId, driverId, newStatus);
+        session.setAttribute(ok ? "flashSuccess" : "flashError",
+                ok ? "Cap nhat trang thai thanh cong!"
+                   : "Khong the cap nhat. Lich khong thuoc tai xe hoac sai thu tu trang thai.");
 
         response.sendRedirect(request.getContextPath() + "/driver/schedule");
     }
