@@ -11,8 +11,6 @@ public class PaymentRecord {
     private String paymentStatus;
     private String transactionRef;
     private String note;
-    private String provider;
-    private String providerTransactionRef;
     private LocalDateTime paidAt;
     private LocalDateTime createdAt;
 
@@ -37,14 +35,6 @@ public class PaymentRecord {
     public String getNote() { return note; }
     public void setNote(String note) { this.note = note; }
 
-    public String getProvider() { return provider; }
-    public void setProvider(String provider) { this.provider = provider; }
-
-    public String getProviderTransactionRef() { return providerTransactionRef; }
-    public void setProviderTransactionRef(String providerTransactionRef) {
-        this.providerTransactionRef = providerTransactionRef;
-    }
-
     public LocalDateTime getPaidAt() { return paidAt; }
     public void setPaidAt(LocalDateTime paidAt) { this.paidAt = paidAt; }
 
@@ -52,20 +42,8 @@ public class PaymentRecord {
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 
     public String getDisplayMethod() {
-        if ("DEMO".equalsIgnoreCase(provider)) {
-            return "Thanh toan demo";
-        }
-        if ("BANK_TRANSFER".equalsIgnoreCase(paymentMethod)) {
-            return "Chuyen khoan";
-        }
         if ("CASH".equalsIgnoreCase(paymentMethod)) {
             return "Tien mat";
-        }
-        if ("CARD".equalsIgnoreCase(paymentMethod)) {
-            return "The";
-        }
-        if ("E_WALLET".equalsIgnoreCase(paymentMethod)) {
-            return "Vi dien tu";
         }
         return paymentMethod == null || paymentMethod.isBlank() ? "Khac" : paymentMethod;
     }
@@ -74,17 +52,8 @@ public class PaymentRecord {
         if ("DEPOSIT".equalsIgnoreCase(paymentType)) {
             return "Dat coc";
         }
-        if ("RENTAL_PREPAID".equalsIgnoreCase(paymentType)) {
-            return "Tien thue tra truoc";
-        }
-        if ("DRIVER_FEE_PREPAID".equalsIgnoreCase(paymentType)) {
-            return "Phi tai xe tra truoc";
-        }
         if ("RENTAL_BALANCE".equalsIgnoreCase(paymentType)) {
             return "Thu tien thue/tai xe con lai";
-        }
-        if ("EXTRA_CHARGE".equalsIgnoreCase(paymentType)) {
-            return "Phi phat sinh";
         }
         return paymentType == null ? "" : paymentType;
     }

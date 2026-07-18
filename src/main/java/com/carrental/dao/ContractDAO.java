@@ -4,8 +4,6 @@ import com.carrental.config.DBContext;
 import com.carrental.model.Contract;
 import com.carrental.model.ContractDetail;
 import com.carrental.model.ContractStatus;
-import com.carrental.model.PaymentMode;
-import com.carrental.model.PaymentTransaction;
 import java.math.BigDecimal;
 import java.sql.*;
 import java.time.LocalDateTime;
@@ -20,59 +18,9 @@ public class ContractDAO {
         return lastErrorMessage;
     }
 
-    public boolean createContractWithDetails(Contract contract, List<ContractDetail> details) {
-        String insertContract = "INSERT INTO dbo.Contracts (ContractCode,CustomerID,PickupAt,ReturnAt,"
-            + "PickupLocation,ReturnLocation,DepositAmountDue,FinalAmountDue) VALUES (?,?,?,?,?,?,?,?)";
-        String insertDetail = "INSERT INTO dbo.Contract_Details (ContractID,CarID,RequiresDriver,"
-            + "RentalDailyRate,DriverDailyRate,EstimatedDays,RentalAmount,DriverAmount) VALUES (?,?,?,?,?,?,?,?)";
-
-        try (Connection conn = DBContext.getConnection()) {
-            conn.setAutoCommit(false);
-            try {
-                long contractId;
-                String code = "CR-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
-                try (PreparedStatement ps = conn.prepareStatement(insertContract, Statement.RETURN_GENERATED_KEYS)) {
-                    ps.setString(1, code);
-                    ps.setInt(2, contract.getCustomerId());
-                    ps.setTimestamp(3, Timestamp.valueOf(contract.getPickupAt()));
-                    ps.setTimestamp(4, Timestamp.valueOf(contract.getReturnAt()));
-                    ps.setString(5, contract.getPickupLocation());
-                    ps.setString(6, contract.getReturnLocation());
-                    ps.setBigDecimal(7, contract.getDepositAmountDue());
-                    ps.setBigDecimal(8, contract.getFinalAmountDue());
-                    ps.executeUpdate();
-                    try (ResultSet keys = ps.getGeneratedKeys()) {
-                        keys.next();
-                        contractId = keys.getLong(1);
-                    }
-                }
-                for (ContractDetail d : details) {
-                    try (PreparedStatement ps = conn.prepareStatement(insertDetail)) {
-                        ps.setLong(1, contractId);
-                        ps.setInt(2, d.getCarId());
-                        ps.setBoolean(3, d.isRequiresDriver());
-                        ps.setBigDecimal(4, d.getRentalDailyRate());
-                        ps.setBigDecimal(5, d.getDriverDailyRate());
-                        ps.setBigDecimal(6, d.getEstimatedDays());
-                        ps.setBigDecimal(7, d.getRentalAmount());
-                        ps.setBigDecimal(8, d.getDriverAmount());
-                        ps.executeUpdate();
-                    }
-                }
-                conn.commit();
-                return true;
-            } catch (SQLException e) {
-                conn.rollback();
-                e.printStackTrace();
-            }
-        } catch (SQLException e) { e.printStackTrace(); }
-        return false;
-    }
-
-    public PaymentTransaction createPendingBookingWithDetailsAndPayments(
+    public boolean createPendingBookingWithDetailsAndPayments(
             Contract contract,
-            List<ContractDetail> details,
-            PaymentMode paymentMode) {
+            List<ContractDetail> details) {
 
         lastErrorMessage = null;
 
@@ -109,8 +57,6 @@ public class ContractDAO {
                     }
                 }
 
-                BigDecimal rentalAmount = BigDecimal.ZERO;
-                BigDecimal driverFeeAmount = BigDecimal.ZERO;
                 for (ContractDetail d : details) {
                     try (PreparedStatement ps = conn.prepareStatement(insertDetail)) {
                         ps.setLong(1, contractId);
@@ -123,28 +69,19 @@ public class ContractDAO {
                         ps.setBigDecimal(8, d.getDriverAmount());
                         ps.executeUpdate();
                     }
-                    rentalAmount = rentalAmount.add(safe(d.getRentalAmount()));
-                    driverFeeAmount = driverFeeAmount.add(safe(d.getDriverAmount()));
                 }
 
                 insertStatusHistory(conn, contractId, null, ContractStatus.PENDING_PAYMENT,
-                        "Booking created and waiting for deposit payment.");
+                        "Booking created and waiting for cash deposit.");
 
                 PaymentDAO paymentDAO = new PaymentDAO();
-                PaymentTransaction paymentTransaction = paymentDAO.createPendingPayments(
-                        conn,
-                        contractId,
-                        code,
-                        contract.getDepositAmountDue(),
-                        rentalAmount,
-                        driverFeeAmount,
-                        paymentMode);
+                paymentDAO.createPendingCashDeposit(conn, contractId, contract.getDepositAmountDue());
 
                 contract.setContractId(contractId);
                 contract.setContractCode(code);
                 contract.setStatus(ContractStatus.PENDING_PAYMENT);
                 conn.commit();
-                return paymentTransaction;
+                return true;
             } catch (SQLException e) {
                 conn.rollback();
                 lastErrorMessage = toBookingErrorMessage(e);
@@ -154,7 +91,7 @@ public class ContractDAO {
             lastErrorMessage = toBookingErrorMessage(e);
             e.printStackTrace();
         }
-        return null;
+        return false;
     }
 
     public List<Contract> getContractsByStatus(String status) {
@@ -294,6 +231,13 @@ public class ContractDAO {
                         ps.executeUpdate();
                     }
                 }
+                if ("CANCELLED".equals(newStatus)) {
+                    try (PreparedStatement ps = conn.prepareStatement(
+                            "DELETE FROM dbo.Payments WHERE ContractID=? AND PaymentStatus=N'PENDING'")) {
+                        ps.setLong(1, contractId);
+                        ps.executeUpdate();
+                    }
+                }
                 // Insert history
                 try (PreparedStatement ps = conn.prepareStatement(
                         "INSERT INTO dbo.Contract_Status_History (ContractID,OldStatus,NewStatus,ChangedByUserID) "
@@ -317,9 +261,9 @@ public class ContractDAO {
     private String mapDetailStatus(String contractStatus) {
         return switch (contractStatus) {
             case "RESERVED", "CONFIRMED" -> "BOOKED";
-            case "PAYMENT_EXPIRED", "CANCELLED" -> "CANCELLED";
+            case "CANCELLED" -> "CANCELLED";
             case "CAR_PICKED_UP" -> "PICKED_UP";
-            case "CAR_RETURNED", "SETTLEMENT_PENDING", "COMPLETED" -> "RETURNED";
+            case "CAR_RETURNED", "COMPLETED" -> "RETURNED";
             default -> null;
         };
     }
@@ -329,12 +273,11 @@ public class ContractDAO {
             return true;
         }
         return switch (oldStatus) {
-            case "PENDING_PAYMENT" -> newStatus.equals("PAYMENT_EXPIRED") || newStatus.equals("CANCELLED");
+            case "PENDING_PAYMENT" -> newStatus.equals("CANCELLED");
             case "RESERVED" -> newStatus.equals("CONFIRMED") || newStatus.equals("CANCELLED");
             case "CONFIRMED" -> newStatus.equals("CAR_PICKED_UP") || newStatus.equals("CANCELLED");
             case "CAR_PICKED_UP" -> newStatus.equals("CAR_RETURNED");
-            case "CAR_RETURNED" -> newStatus.equals("SETTLEMENT_PENDING") || newStatus.equals("COMPLETED");
-            case "SETTLEMENT_PENDING" -> newStatus.equals("COMPLETED");
+            case "CAR_RETURNED" -> newStatus.equals("COMPLETED");
             default -> false;
         };
     }
@@ -352,22 +295,10 @@ public class ContractDAO {
         }
     }
 
-    private BigDecimal safe(BigDecimal value) {
-        return value == null ? BigDecimal.ZERO : value;
-    }
-
     private String toBookingErrorMessage(SQLException e) {
         String message = e.getMessage();
         if (message == null) {
             return "Dat xe that bai do loi co so du lieu.";
-        }
-        if (message.contains("CK_Contracts_Status")
-                || message.contains("Payment_Transactions")
-                || message.contains("ProviderOrderCode")
-                || message.contains("ProviderCheckoutUrl")
-                || message.contains("CK_Payments_Type")
-                || message.contains("CK_Payments_Status")) {
-            return "Database chua cap nhat cau truc thanh toan demo. Hay chay sql/upgrade-existing-database.sql roi thu lai.";
         }
         if (message.toLowerCase().contains("overlap")
                 || message.toLowerCase().contains("conflict")) {

@@ -130,11 +130,7 @@
 
     const summary = document.getElementById('bookingSummary');
     const driverFeeText = document.getElementById('summaryDriverFee');
-    const requiredPaymentText = document.getElementById('summaryRequiredPayment');
-    const requiredPaymentLabel = document.getElementById('summaryRequiredPaymentLabel');
-    const fullPrepaymentText = document.getElementById('summaryFullPrepayment');
     const driverCheckboxes = Array.from(document.querySelectorAll('.booking-driver-checkbox'));
-    const paymentModeRadios = Array.from(document.querySelectorAll('input[name="paymentMode"]'));
 
     function parseAmount(value) {
         const number = Number.parseFloat(value || '0');
@@ -147,30 +143,15 @@
 
     function updateBookingSummary() {
         if (!summary) return;
-        const deposit = parseAmount(summary.dataset.deposit);
-        const rental = parseAmount(summary.dataset.rental);
         const driverFeePerCar = parseAmount(summary.dataset.driverFeePerCar);
         const selectedDriverCount = driverCheckboxes.filter(function(checkbox) { return checkbox.checked; }).length;
         const driverFee = selectedDriverCount * driverFeePerCar;
-        const fullTotal = deposit + rental + driverFee;
-        const paymentMode = (document.querySelector('input[name="paymentMode"]:checked') || {}).value || 'DEPOSIT_ONLY';
-        const requiredPayment = paymentMode === 'FULL_PREPAYMENT' ? fullTotal : deposit;
 
         if (driverFeeText) driverFeeText.textContent = formatVnd(driverFee);
-        if (fullPrepaymentText) fullPrepaymentText.textContent = formatVnd(fullTotal);
-        if (requiredPaymentText) requiredPaymentText.textContent = formatVnd(requiredPayment);
-        if (requiredPaymentLabel) {
-            requiredPaymentLabel.textContent = paymentMode === 'FULL_PREPAYMENT'
-                    ? 'Can thanh toan toan bo:'
-                    : 'Can thanh toan de giu xe:';
-        }
     }
 
     driverCheckboxes.forEach(function(checkbox) {
         checkbox.addEventListener('change', updateBookingSummary);
-    });
-    paymentModeRadios.forEach(function(radio) {
-        radio.addEventListener('change', updateBookingSummary);
     });
     updateBookingSummary();
 })();

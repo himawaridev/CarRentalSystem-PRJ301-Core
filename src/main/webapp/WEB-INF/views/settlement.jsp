@@ -53,10 +53,6 @@
                     <span>Tien thue/tai xe da thu</span>
                     <strong><fmt:formatNumber value="${settlement.rentalPaid}" pattern="#,###"/> VND</strong>
                 </div>
-                <div class="settlement-line-row">
-                    <span>Phi phat sinh chua thu</span>
-                    <strong><fmt:formatNumber value="${settlement.extraCharge}" pattern="#,###"/> VND</strong>
-                </div>
             </div>
 
             <div class="settlement-total-grid">
@@ -103,7 +99,7 @@
                                         <td>
                                             <c:choose>
                                                 <c:when test="${not empty p.transactionRef}">${p.transactionRef}</c:when>
-                                                <c:otherwise>${p.providerTransactionRef}</c:otherwise>
+                                                <c:otherwise>-</c:otherwise>
                                             </c:choose>
                                         </td>
                                         <td>
@@ -132,7 +128,7 @@
                     <input type="hidden" name="contractId" value="${contract.contractId}">
                     <div class="alert alert-info mb-0">
                         Nhan vien thu them <strong><fmt:formatNumber value="${settlement.amountToCollect}" pattern="#,###"/> VND</strong>
-                        bang tien mat hoac chuyen khoan, sau do bam nut de ghi nhan.
+                        bang tien mat, sau do bam nut de ghi nhan.
                     </div>
                     <div class="text-end">
                         <button type="submit" name="action" value="collectBalance" class="btn btn-accent btn-action-nowrap">

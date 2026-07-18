@@ -1,76 +1,36 @@
-/*
-    CarRentalSystem database check script.
-    Run this when NetBeans/Tomcat can connect but the app reports missing payment/refund schema.
-*/
-
-
-/* ============================================================
-   1. SQL Server and database visibility
-   ============================================================ */
+/* CarRentalSystem PRJ301 Core database health check. */
 
 SELECT
     @@SERVERNAME AS ServerName,
-    SERVERPROPERTY('InstanceName') AS InstanceName,
-    SERVERPROPERTY('MachineName') AS MachineName,
     DB_NAME() AS CurrentDatabase,
     SUSER_SNAME() AS LoginName;
 
-SELECT name AS DatabaseName
-FROM sys.databases
-ORDER BY name;
-
-
-/* ============================================================
-   2. CarRentalDB payment/refund schema checks
-   ============================================================ */
-
-USE master;
-GO
-
-IF DB_ID(N'CarRentalDB') IS NULL
+IF DB_ID(N'CarRentalCore') IS NULL
 BEGIN
-    RAISERROR(N'Database CarRentalDB does not exist on this SQL Server instance. Run sql/check-database.sql and connect to the same instance as DBContext.', 16, 1);
+    RAISERROR(N'Database CarRentalCore does not exist. Run sql/setup-database.sql first.', 16, 1);
     RETURN;
 END;
 GO
 
-USE CarRentalDB;
+USE CarRentalCore;
 GO
 
-SELECT
-    cc.name AS ConstraintName,
-    cc.definition AS ConstraintDefinition
-FROM sys.check_constraints cc
-WHERE cc.parent_object_id = OBJECT_ID(N'dbo.Contracts')
-  AND cc.name = N'CK_Contracts_Status';
+SELECT expected.TableName,
+       CASE WHEN actual.object_id IS NULL THEN N'MISSING' ELSE N'OK' END AS Status
+FROM (VALUES
+    (N'Users'), (N'User_Roles'), (N'Customers'), (N'Cars'),
+    (N'Contracts'), (N'Contract_Details'), (N'Payments'),
+    (N'Drivers'), (N'Driver_Assignments')
+) expected(TableName)
+LEFT JOIN sys.tables actual ON actual.name = expected.TableName
+ORDER BY expected.TableName;
 
-SELECT
-    CASE WHEN OBJECT_ID(N'dbo.Payment_Transactions', N'U') IS NULL
-         THEN N'MISSING'
-         ELSE N'OK'
-    END AS PaymentTransactionsTable;
+SELECT Status, COUNT(*) AS TotalCars
+FROM dbo.Cars
+GROUP BY Status
+ORDER BY Status;
 
-SELECT
-    CASE WHEN OBJECT_ID(N'dbo.Refunds', N'U') IS NULL
-         THEN N'MISSING'
-         ELSE N'OK'
-    END AS RefundsTable;
-
-SELECT
-    CASE WHEN COL_LENGTH(N'dbo.Users', N'EmailVerified') IS NULL
-         THEN N'MISSING'
-         ELSE N'OK'
-    END AS UsersEmailVerifiedColumn,
-    CASE WHEN OBJECT_ID(N'dbo.Pending_Registrations', N'U') IS NULL
-         THEN N'MISSING'
-         ELSE N'OK'
-    END AS PendingRegistrationsTable,
-    CASE WHEN OBJECT_ID(N'dbo.Password_Reset_Codes', N'U') IS NULL
-         THEN N'MISSING'
-         ELSE N'OK'
-    END AS PasswordResetCodesTable;
-
-SELECT TOP 20 Status, COUNT(*) AS Total
+SELECT Status, COUNT(*) AS TotalContracts
 FROM dbo.Contracts
 GROUP BY Status
 ORDER BY Status;

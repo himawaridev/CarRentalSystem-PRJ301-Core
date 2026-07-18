@@ -7,6 +7,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -18,10 +19,8 @@ final class PaymentBalanceWorkflow {
     static List<PaymentRecord> getPaymentRecordsByContractId(long contractId) {
         List<PaymentRecord> records = new ArrayList<>();
         String sql = "SELECT p.PaymentID, p.PaymentType, p.Amount, p.PaymentMethod, p.PaymentStatus, "
-                + "p.PaidAt, p.TransactionRef, p.Note, p.CreatedAt, "
-                + "tx.Provider, tx.ProviderTransactionRef "
+                + "p.PaidAt, p.TransactionRef, p.Note, p.CreatedAt "
                 + "FROM dbo.Payments p "
-                + "LEFT JOIN dbo.Payment_Transactions tx ON tx.PaymentTransactionID = p.PaymentTransactionID "
                 + "WHERE p.ContractID = ? "
                 + "ORDER BY p.CreatedAt ASC, p.PaymentID ASC";
         try (Connection conn = DBContext.getConnection();
@@ -29,7 +28,7 @@ final class PaymentBalanceWorkflow {
             ps.setLong(1, contractId);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
-                    records.add(PaymentRowMapper.mapPaymentRecord(rs));
+                    records.add(mapPaymentRecord(rs));
                 }
             }
         } catch (SQLException e) {
@@ -43,7 +42,7 @@ final class PaymentBalanceWorkflow {
             BigDecimal amount,
             int receivedByUserId,
             String note) {
-        if (PaymentAmounts.safe(amount).compareTo(BigDecimal.ZERO) <= 0) {
+        if (PaymentDAO.safe(amount).compareTo(BigDecimal.ZERO) <= 0) {
             return false;
         }
 
@@ -74,5 +73,21 @@ final class PaymentBalanceWorkflow {
             e.printStackTrace();
         }
         return false;
+    }
+
+    private static PaymentRecord mapPaymentRecord(ResultSet rs) throws SQLException {
+        PaymentRecord record = new PaymentRecord();
+        record.setPaymentId(rs.getLong("PaymentID"));
+        record.setPaymentType(rs.getString("PaymentType"));
+        record.setAmount(rs.getBigDecimal("Amount"));
+        record.setPaymentMethod(rs.getString("PaymentMethod"));
+        record.setPaymentStatus(rs.getString("PaymentStatus"));
+        record.setTransactionRef(rs.getString("TransactionRef"));
+        record.setNote(rs.getString("Note"));
+        Timestamp paid = rs.getTimestamp("PaidAt");
+        if (paid != null) record.setPaidAt(paid.toLocalDateTime());
+        Timestamp created = rs.getTimestamp("CreatedAt");
+        if (created != null) record.setCreatedAt(created.toLocalDateTime());
+        return record;
     }
 }

@@ -201,26 +201,6 @@ public class CarDAO {
         return null;
     }
 
-    public List<Car> getCatalogCarGroups() {
-        List<Car> cars = new ArrayList<>();
-        String sql = "WITH RankedCars AS ("
-            + "SELECT c.*, ct.TypeName, ct.SeatCount, "
-            + "SUM(CASE WHEN c.Status = N'AVAILABLE' THEN 1 ELSE 0 END) "
-            + "OVER (PARTITION BY c.CarTypeID, c.Brand, c.Model, c.ManufactureYear, c.Transmission, c.FuelType, c.DailyRate, c.DepositAmount) AS AvailableQuantity, "
-            + "ROW_NUMBER() OVER (PARTITION BY c.CarTypeID, c.Brand, c.Model, c.ManufactureYear, c.Transmission, c.FuelType, c.DailyRate, c.DepositAmount "
-            + "ORDER BY CASE WHEN c.Status = N'AVAILABLE' THEN 0 ELSE 1 END, c.CarID DESC) AS GroupRank "
-            + "FROM dbo.Cars c "
-            + "INNER JOIN dbo.Car_Types ct ON c.CarTypeID = ct.CarTypeID"
-            + ") "
-            + "SELECT * FROM RankedCars WHERE GroupRank = 1 ORDER BY Brand, Model, DailyRate";
-        try (Connection conn = DBContext.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
-            while (rs.next()) cars.add(mapCar(rs));
-        } catch (SQLException e) { e.printStackTrace(); }
-        return cars;
-    }
-
     public List<Car> getAllCars() {
         List<Car> cars = new ArrayList<>();
         String sql = "WITH AvailableGroups AS ("

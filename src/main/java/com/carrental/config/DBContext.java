@@ -16,7 +16,8 @@ import java.util.Properties;
 
 /**
  * Database connection utility for SQL Server.
- * Local credentials are loaded from config/database-local.properties or environment variables.
+ * Uses the Microsoft JDBC driver and loads local credentials from a properties file,
+ * Java system properties, or environment variables.
  */
 public class DBContext {
 
@@ -24,7 +25,7 @@ public class DBContext {
     // Open SQL Server Configuration Manager -> Protocols -> Enable TCP/IP -> Restart SQL Server
     private static final String LOCAL_CONFIG_PATH = "config/database-local.properties";
     private static final String DEFAULT_URL =
-            "jdbc:sqlserver://localhost:1433;databaseName=CarRentalDB;encrypt=true;trustServerCertificate=true;loginTimeout=10;";
+            "jdbc:sqlserver://localhost:1433;databaseName=CarRentalCore;encrypt=true;trustServerCertificate=true;loginTimeout=10;";
 
     static {
         try {
@@ -45,8 +46,9 @@ public class DBContext {
         String value = config(envName, propertyName, null);
         if (value == null || value.isBlank()) {
             throw new SQLException("Missing database config " + envName
-                    + ". Create config/database-local.properties from config/database-local.example.properties "
-                    + "or set environment variable " + envName + ".");
+                    + ". Copy src/main/resources/database-local.example.properties to "
+                    + "src/main/resources/database-local.properties, or set environment variable "
+                    + envName + ".");
         }
         return value;
     }

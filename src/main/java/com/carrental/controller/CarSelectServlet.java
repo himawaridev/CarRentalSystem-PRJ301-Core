@@ -2,6 +2,7 @@ package com.carrental.controller;
 
 import com.carrental.dao.CarDAO;
 import com.carrental.model.Car;
+import com.carrental.service.RentalPeriodValidator;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -60,6 +61,12 @@ public class CarSelectServlet extends HttpServlet {
             returnAt = LocalDateTime.parse(returnStr);
         } catch (DateTimeParseException | NullPointerException e) {
             request.setAttribute("error", "Ngay gio nhan/tra xe khong hop le.");
+            forward(request, response);
+            return;
+        }
+
+        if (RentalPeriodValidator.isPickupInPast(pickupAt)) {
+            request.setAttribute("error", "Thoi gian nhan xe khong duoc nam trong qua khu.");
             forward(request, response);
             return;
         }

@@ -8,6 +8,9 @@
     <c:if test="${not empty success}">
         <div class="alert alert-custom-success">${success}</div>
     </c:if>
+    <c:if test="${not empty error}">
+        <div class="alert alert-custom-error">${error}</div>
+    </c:if>
 
     <c:if test="${empty schedule}">
         <div class="text-center py-5">

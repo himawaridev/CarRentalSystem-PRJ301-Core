@@ -35,7 +35,7 @@ public class DriverDAO {
             + "  INNER JOIN dbo.Contracts c ON cd.ContractID = c.ContractID "
             + "  WHERE da.DriverID = d.DriverID "
             + "    AND da.AssignmentStatus NOT IN (N'CANCELLED', N'TRIP_COMPLETED') "
-            + "    AND c.Status NOT IN (N'PENDING_PAYMENT', N'PAYMENT_EXPIRED', N'CANCELLED', N'COMPLETED') "
+            + "    AND c.Status NOT IN (N'PENDING_PAYMENT', N'CANCELLED', N'COMPLETED') "
             + "    AND c.PickupAt < ? AND c.ReturnAt > ? "
             + ") THEN 1 ELSE 0 END AS IsBusy "
             + "FROM dbo.Drivers d "
@@ -75,7 +75,7 @@ public class DriverDAO {
             + "INNER JOIN dbo.Customers cu ON con.CustomerID = cu.CustomerID "
             + "INNER JOIN dbo.Users u2 ON cu.UserID = u2.UserID "
             + "WHERE da.AssignmentStatus NOT IN (N'CANCELLED', N'TRIP_COMPLETED') "
-            + "AND con.Status NOT IN (N'PENDING_PAYMENT', N'PAYMENT_EXPIRED', N'CANCELLED', N'COMPLETED') "
+            + "AND con.Status NOT IN (N'PENDING_PAYMENT', N'CANCELLED', N'COMPLETED') "
             + "ORDER BY con.PickupAt DESC";
         try (Connection conn = DBContext.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql);
@@ -185,19 +185,26 @@ public class DriverDAO {
         return list;
     }
 
-    public boolean updateAssignmentStatus(long assignmentId, String status) {
-        String sql;
-        if ("TRIP_COMPLETED".equals(status)) {
-            sql = "UPDATE dbo.Driver_Assignments SET AssignmentStatus=?, TripCompletedAt=SYSUTCDATETIME() WHERE AssignmentID=?";
-        } else if ("HANDOVER_RECEIVED".equals(status)) {
-            sql = "UPDATE dbo.Driver_Assignments SET AssignmentStatus=?, HandoverReceivedAt=SYSUTCDATETIME() WHERE AssignmentID=?";
-        } else {
-            sql = "UPDATE dbo.Driver_Assignments SET AssignmentStatus=? WHERE AssignmentID=?";
+    public boolean updateAssignmentStatus(long assignmentId, int driverId, String status) {
+        if (!List.of("HANDOVER_RECEIVED", "TRIP_IN_PROGRESS", "TRIP_COMPLETED").contains(status)) {
+            return false;
         }
+        String sql = "UPDATE dbo.Driver_Assignments SET AssignmentStatus = ?, "
+                + "HandoverReceivedAt = CASE WHEN ? = N'HANDOVER_RECEIVED' THEN SYSUTCDATETIME() ELSE HandoverReceivedAt END, "
+                + "TripCompletedAt = CASE WHEN ? = N'TRIP_COMPLETED' THEN SYSUTCDATETIME() ELSE TripCompletedAt END "
+                + "WHERE AssignmentID = ? AND DriverID = ? AND ((AssignmentStatus = N'ASSIGNED' AND ? = N'HANDOVER_RECEIVED') "
+                + "OR (AssignmentStatus = N'HANDOVER_RECEIVED' AND ? = N'TRIP_IN_PROGRESS') "
+                + "OR (AssignmentStatus = N'TRIP_IN_PROGRESS' AND ? = N'TRIP_COMPLETED'))";
         try (Connection conn = DBContext.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, status);
-            ps.setLong(2, assignmentId);
+            ps.setString(2, status);
+            ps.setString(3, status);
+            ps.setLong(4, assignmentId);
+            ps.setInt(5, driverId);
+            ps.setString(6, status);
+            ps.setString(7, status);
+            ps.setString(8, status);
             return ps.executeUpdate() > 0;
         } catch (SQLException e) { e.printStackTrace(); }
         return false;

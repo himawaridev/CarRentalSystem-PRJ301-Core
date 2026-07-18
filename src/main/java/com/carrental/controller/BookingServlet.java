@@ -6,9 +6,8 @@ import com.carrental.dao.UserDAO;
 import com.carrental.model.Car;
 import com.carrental.model.Contract;
 import com.carrental.model.ContractDetail;
-import com.carrental.model.PaymentMode;
-import com.carrental.model.PaymentTransaction;
 import com.carrental.model.User;
+import com.carrental.service.RentalPeriodValidator;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -17,9 +16,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
@@ -33,6 +29,7 @@ public class BookingServlet extends HttpServlet {
 
     private static final BigDecimal DRIVER_DAILY_RATE = new BigDecimal("300000");
     private static final String SPECIFIC_SELECTION_MODE = "specific";
+    private static final long MINUTES_PER_RENTAL_DAY = 24 * 60;
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -43,6 +40,8 @@ public class BookingServlet extends HttpServlet {
         String selectionMode = request.getParameter("selectionMode");
 
         if (!populateBookingView(request, pickupStr, returnStr, carIds, null, selectionMode)) {
+            request.getSession().setAttribute("flashError",
+                    "Khong the xac nhan dat xe: xe khong con kha dung hoac thoi gian nhan xe khong hop le.");
             response.sendRedirect(request.getContextPath() + "/search");
             return;
         }
@@ -63,9 +62,8 @@ public class BookingServlet extends HttpServlet {
         UserDAO userDAO = new UserDAO();
         Integer customerId = userDAO.getCustomerIdByUserId(user.getUserId());
         if (customerId == null) {
-            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-            request.setAttribute("error", "Tai khoan chua co ho so khach hang.");
-            request.getRequestDispatcher("/WEB-INF/views/booking.jsp").forward(request, response);
+            session.invalidate();
+            response.sendRedirect(request.getContextPath() + "/login?error=auth");
             return;
         }
 
@@ -80,7 +78,6 @@ public class BookingServlet extends HttpServlet {
         String[] carIds = request.getParameterValues("carId");
         String[] requiresDriverFlags = request.getParameterValues("requiresDriver");
         String selectionMode = request.getParameter("selectionMode");
-        PaymentMode paymentMode = PaymentMode.fromRequest(request.getParameter("paymentMode"));
 
         request.setAttribute("pickupLocation", pickupLocation);
         request.setAttribute("pickupSpecificAddress", pickupSpecificAddress);
@@ -88,7 +85,6 @@ public class BookingServlet extends HttpServlet {
         request.setAttribute("pickupDistrict", pickupDistrict);
         request.setAttribute("pickupWard", pickupWard);
         request.setAttribute("returnLocation", returnLocation);
-        request.setAttribute("paymentMode", paymentMode.name());
         request.setAttribute("selectionMode", selectionMode);
 
         if (isBlank(pickupSpecificAddress) || isBlank(pickupProvince)
@@ -109,15 +105,19 @@ public class BookingServlet extends HttpServlet {
             return;
         }
 
+        if (RentalPeriodValidator.isPickupInPast(pickupAt)) {
+            rejectBadBooking(request, response, pickupStr, returnStr, carIds, requiresDriverFlags, selectionMode,
+                    "Thoi gian nhan xe khong duoc nam trong qua khu. Vui long tim va chon xe lai.");
+            return;
+        }
+
         if (!returnAt.isAfter(pickupAt) || carIds == null || carIds.length == 0) {
             rejectBadBooking(request, response, pickupStr, returnStr, carIds, requiresDriverFlags, selectionMode,
                     "Vui long chon xe va thoi gian tra xe phai sau thoi gian nhan xe.");
             return;
         }
 
-        long hours = ChronoUnit.HOURS.between(pickupAt, returnAt);
-        BigDecimal days = BigDecimal.valueOf(Math.max(hours, 24))
-                .divide(BigDecimal.valueOf(24), 2, RoundingMode.CEILING);
+        BigDecimal days = calculateBillableDays(pickupAt, returnAt);
 
         CarDAO carDAO = new CarDAO();
         List<ContractDetail> details = new ArrayList<>();
@@ -177,10 +177,9 @@ public class BookingServlet extends HttpServlet {
         contract.setFinalAmountDue(totalAmount);
 
         ContractDAO contractDAO = new ContractDAO();
-        PaymentTransaction paymentTransaction = contractDAO.createPendingBookingWithDetailsAndPayments(
-                contract, details, paymentMode);
+        boolean created = contractDAO.createPendingBookingWithDetailsAndPayments(contract, details);
 
-        if (paymentTransaction == null) {
+        if (!created) {
             String error = contractDAO.getLastErrorMessage();
             if (error == null || error.isBlank()) {
                 error = "Dat xe that bai. Xe co the da duoc dat boi nguoi khac.";
@@ -190,8 +189,9 @@ public class BookingServlet extends HttpServlet {
             return;
         }
 
-        String ref = URLEncoder.encode(paymentTransaction.getProviderTransactionRef(), StandardCharsets.UTF_8);
-        response.sendRedirect(request.getContextPath() + "/payment/pending?ref=" + ref);
+        session.setAttribute("flashSuccess",
+                "Da tao hop dong. Vui long thanh toan tien coc truc tiep cho nhan vien.");
+        response.sendRedirect(request.getContextPath() + "/my-contracts");
     }
 
     private void rejectBadBooking(
@@ -225,13 +225,11 @@ public class BookingServlet extends HttpServlet {
         try {
             LocalDateTime pickupAt = LocalDateTime.parse(pickupStr);
             LocalDateTime returnAt = LocalDateTime.parse(returnStr);
-            if (!returnAt.isAfter(pickupAt)) {
+            if (!RentalPeriodValidator.isValid(pickupAt, returnAt)) {
                 return false;
             }
 
-            long hours = ChronoUnit.HOURS.between(pickupAt, returnAt);
-            BigDecimal days = BigDecimal.valueOf(Math.max(hours, 24))
-                    .divide(BigDecimal.valueOf(24), 2, RoundingMode.CEILING);
+            BigDecimal days = calculateBillableDays(pickupAt, returnAt);
 
             CarDAO carDAO = new CarDAO();
             List<Car> selectedCars = new ArrayList<>();
@@ -268,7 +266,6 @@ public class BookingServlet extends HttpServlet {
             request.setAttribute("totalRental", totalRental);
             request.setAttribute("totalDriverFee", totalDriverFee);
             request.setAttribute("driverFeePerCar", DRIVER_DAILY_RATE.multiply(days));
-            request.setAttribute("fullPrepaymentTotal", totalDeposit.add(totalRental).add(totalDriverFee));
             request.setAttribute("selectedDriverCarIds", driverCarIds);
             request.setAttribute("selectedDriverCarIdNumbers", toIntegerSet(requiresDriverFlags));
             request.setAttribute("selectionMode", selectionMode);
@@ -294,6 +291,13 @@ public class BookingServlet extends HttpServlet {
             return String.join(", ", parts);
         }
         return normalizeLocation(request.getParameter("pickupLocation"));
+    }
+
+    private BigDecimal calculateBillableDays(LocalDateTime pickupAt, LocalDateTime returnAt) {
+        long rentalMinutes = ChronoUnit.MINUTES.between(pickupAt, returnAt);
+        long billableDays = Math.max(1, (rentalMinutes + MINUTES_PER_RENTAL_DAY - 1)
+                / MINUTES_PER_RENTAL_DAY);
+        return BigDecimal.valueOf(billableDays);
     }
 
     private String normalizeLocation(String value) {

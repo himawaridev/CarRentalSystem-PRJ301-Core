@@ -52,58 +52,87 @@
     <div class="container">
         <div class="search-card mx-auto">
             <div class="search-card-header">
-                <i class="bi bi-search me-2"></i>Tim xe phu hop voi ban
+                <div class="search-card-heading">
+                    <span class="search-heading-icon"><i class="bi bi-search"></i></span>
+                    <div>
+                        <div class="search-heading-title">Tim xe phu hop</div>
+                        <div class="search-heading-note">Gia thue duoc tinh theo chu ky 24 gio</div>
+                    </div>
+                </div>
             </div>
             <div class="search-card-body">
                 <c:if test="${not empty error}">
                     <div class="alert alert-custom-error mb-3">${error}</div>
                 </c:if>
                 <form method="post" action="${pageContext.request.contextPath}/search" id="searchForm">
-                    <div class="row g-3 align-items-end">
-                        <div class="col-md-6 col-lg-2">
-                            <label class="form-label">Thuong hieu</label>
-                            <select name="brand" class="form-select">
+                    <fieldset class="search-filter-group">
+                        <legend class="search-filter-title">
+                            <span class="search-filter-icon vehicle"><i class="bi bi-car-front"></i></span>
+                            Xe va ngan sach
+                        </legend>
+                        <div class="vehicle-filter-grid">
+                        <div class="search-field">
+                            <label class="form-label" for="searchBrand">Thuong hieu</label>
+                            <select name="brand" id="searchBrand" class="form-select">
                                 <option value="">Tat ca hang xe</option>
                                 <c:forEach var="b" items="${brands}">
                                     <option value="${b}" ${brandFilter == b ? 'selected' : ''}>${b}</option>
                                 </c:forEach>
                             </select>
                         </div>
-                        <div class="col-md-6 col-lg-2">
-                            <label class="form-label">So cho</label>
-                            <select name="seatCount" class="form-select">
+                        <div class="search-field">
+                            <label class="form-label" for="searchSeatCount">So cho</label>
+                            <select name="seatCount" id="searchSeatCount" class="form-select">
                                 <option value="">Tat ca so cho</option>
                                 <c:forEach var="s" items="${seatCounts}">
                                     <option value="${s}" ${seatCount == s ? 'selected' : ''}>${s} cho ngoi</option>
                                 </c:forEach>
                             </select>
                         </div>
-                        <div class="col-md-6 col-lg-2">
-                            <label class="form-label">Gia tu</label>
-                            <input type="number" min="0" step="1000" name="minPrice" class="form-control"
-                                   value="${minPrice}" placeholder="VD: 500000">
+                        <div class="search-field">
+                            <label class="form-label" for="searchMinPrice">Gia toi thieu</label>
+                            <div class="search-input-affix">
+                                <input type="number" min="0" step="1000" name="minPrice" id="searchMinPrice" class="form-control"
+                                       value="${minPrice}" placeholder="500.000">
+                                <span>VND</span>
+                            </div>
                         </div>
-                        <div class="col-md-6 col-lg-2">
-                            <label class="form-label">Gia den</label>
-                            <input type="number" min="0" step="1000" name="maxPrice" class="form-control"
-                                   value="${maxPrice}" placeholder="VD: 1500000">
+                        <div class="search-field">
+                            <label class="form-label" for="searchMaxPrice">Gia toi da</label>
+                            <div class="search-input-affix">
+                                <input type="number" min="0" step="1000" name="maxPrice" id="searchMaxPrice" class="form-control"
+                                       value="${maxPrice}" placeholder="1.500.000">
+                                <span>VND</span>
+                            </div>
                         </div>
-                        <div class="col-md-6 col-lg-2">
-                            <label class="form-label">Ngay gio nhan xe</label>
-                            <input type="datetime-local" name="pickupAt" class="form-control"
-                                   value="${pickupAt}" required>
                         </div>
-                        <div class="col-md-6 col-lg-2">
-                            <label class="form-label">Ngay gio tra xe</label>
-                            <input type="datetime-local" name="returnAt" class="form-control"
+                    </fieldset>
+
+                    <fieldset class="search-filter-group time-group">
+                        <legend class="search-filter-title">
+                            <span class="search-filter-icon time"><i class="bi bi-calendar3"></i></span>
+                            Thoi gian thue
+                        </legend>
+                        <div class="rental-time-grid">
+                        <div class="search-field">
+                            <label class="form-label" for="searchPickupAt">Ngay gio nhan xe</label>
+                            <input type="datetime-local" name="pickupAt" id="searchPickupAt" class="form-control"
+                                   value="${pickupAt}" min="${minimumPickupAt}" required>
+                        </div>
+                        <div class="rental-time-arrow" aria-hidden="true"><i class="bi bi-arrow-right"></i></div>
+                        <div class="search-field">
+                            <label class="form-label" for="searchReturnAt">Ngay gio tra xe</label>
+                            <input type="datetime-local" name="returnAt" id="searchReturnAt" class="form-control"
                                    value="${returnAt}" required>
                         </div>
-                        <div class="col-12">
-                            <button type="submit" class="btn btn-accent btn-action-nowrap w-100">
-                                <i class="bi bi-search me-1"></i>Tim kiem
+                        <div class="search-submit-wrap">
+                            <button type="submit" class="btn btn-accent btn-action-nowrap search-submit-btn">
+                                <i class="bi bi-search"></i>
+                                <span>Tim xe ngay</span>
                             </button>
                         </div>
-                    </div>
+                        </div>
+                    </fieldset>
                 </form>
             </div>
         </div>
@@ -145,57 +174,6 @@
                 </div>
             </div>
         </div>
-
-        <c:if test="${not empty featuredBrandGroups}">
-            <div class="featured-brands-section mt-5">
-                <h3 class="section-title text-center">Xe noi bat theo <span class="text-gradient">thuong hieu</span></h3>
-                <p class="section-subtitle text-center">Anh xe duoc gom theo hang va tu dong luot moi 3 giay</p>
-                <div class="row g-4 mt-2">
-                    <c:forEach var="brandEntry" items="${featuredBrandGroups}">
-                        <div class="col-md-6 col-xl-3">
-                            <div class="brand-showcase-card">
-                                <div class="swiper brand-image-swiper" data-slider="brand-images">
-                                    <div class="swiper-wrapper">
-                                        <c:forEach var="imageCar" items="${brandEntry.value}">
-                                            <c:set var="featuredImageSrc" value="${empty imageCar.imageUrl ? placeholderImage : imageCar.imageUrl}" />
-                                            <div class="swiper-slide">
-                                                <img src="${featuredImageSrc}"
-                                                     alt="${imageCar.brand} ${imageCar.model}"
-                                                     class="brand-showcase-image"
-                                                     loading="lazy"
-                                                     decoding="async"
-                                                     onerror="this.onerror=null;this.src='${placeholderImage}';">
-                                            </div>
-                                        </c:forEach>
-                                    </div>
-                                    <div class="swiper-pagination brand-image-pagination"></div>
-                                </div>
-                                <div class="brand-showcase-body">
-                                    <div class="d-flex justify-content-between align-items-start gap-2">
-                                        <div>
-                                            <h5>${brandEntry.key}</h5>
-                                            <div class="text-muted small">${fn:length(brandEntry.value)} dong xe dang hien thi</div>
-                                        </div>
-                                        <span class="brand-count-badge">${fn:length(brandEntry.value)}</span>
-                                    </div>
-                                    <div class="brand-models">
-                                        <c:forEach var="brandCar" items="${brandEntry.value}" varStatus="st">
-                                            <span>${brandCar.model}</span>
-                                        </c:forEach>
-                                    </div>
-                                    <c:url var="brandCarsUrl" value="/cars">
-                                        <c:param name="brand" value="${brandEntry.key}" />
-                                    </c:url>
-                                    <a href="${brandCarsUrl}" class="btn btn-outline-accent btn-action-nowrap btn-sm w-100">
-                                        <i class="bi bi-grid me-1"></i>Xem cac xe ${brandEntry.key}
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    </c:forEach>
-                </div>
-            </div>
-        </c:if>
 
         <!-- Car brands showcase -->
         <div class="brands-section mt-5">
@@ -286,5 +264,30 @@
     <p class="text-muted">Vui long thu lai voi ngay khac, thuong hieu khac hoac khoang gia rong hon.</p>
 </div>
 </c:if>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var pickupInput = document.getElementById('searchPickupAt');
+    var returnInput = document.getElementById('searchReturnAt');
+    if (!pickupInput || !returnInput) return;
+
+    function addOneMinute(value) {
+        var date = new Date(value);
+        date.setMinutes(date.getMinutes() + 1);
+        date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+        return date.toISOString().slice(0, 16);
+    }
+
+    function updateReturnMinimum() {
+        var pickupValue = pickupInput.value || pickupInput.min;
+        if (pickupValue) {
+            returnInput.min = addOneMinute(pickupValue);
+        }
+    }
+
+    pickupInput.addEventListener('change', updateReturnMinimum);
+    updateReturnMinimum();
+});
+</script>
 
 <jsp:include page="/WEB-INF/includes/footer.jsp"/>

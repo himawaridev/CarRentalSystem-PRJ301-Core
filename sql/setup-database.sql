@@ -1,7 +1,7 @@
 /*
     CarRentalSystem fresh database setup.
-    Use this file for a new local SQL Server database.
-    Do not run this on an existing production database; use sql/upgrade-existing-database.sql instead.
+    Run the entire file in SSMS to recreate the local Core database.
+    WARNING: existing CarRentalCore data will be deleted.
 */
 
 
@@ -9,13 +9,20 @@
    1. Schema, constraints, indexes, triggers, base configuration
    ============================================================ */
 
-IF DB_ID(N'CarRentalDB') IS NULL
+USE master;
+GO
+
+IF DB_ID(N'CarRentalCore') IS NOT NULL
 BEGIN
-    CREATE DATABASE CarRentalDB;
+    ALTER DATABASE CarRentalCore SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+    DROP DATABASE CarRentalCore;
 END
 GO
 
-USE CarRentalDB;
+CREATE DATABASE CarRentalCore;
+GO
+
+USE CarRentalCore;
 GO
 
 SET QUOTED_IDENTIFIER ON;
@@ -40,15 +47,6 @@ CREATE TABLE dbo.Users (
     Phone NVARCHAR(30) NULL,
     Address NVARCHAR(255) NULL,
     IdentityNumber NVARCHAR(30) NULL,
-    BankCode NVARCHAR(30) NULL,
-    BankName NVARCHAR(120) NULL,
-    BankAccountNumber NVARCHAR(30) NULL,
-    BankAccountHolder NVARCHAR(120) NULL,
-    DateOfBirth DATE NULL,
-    EmailVerified BIT NOT NULL DEFAULT 1,
-    EmailVerifiedAt DATETIME2(0) NULL,
-    AuthProvider NVARCHAR(30) NULL,
-    AuthProviderSubject NVARCHAR(120) NULL,
     Status NVARCHAR(20) NOT NULL DEFAULT N'ACTIVE',
     CreatedAt DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
     UpdatedAt DATETIME2(0) NULL,
@@ -60,52 +58,6 @@ CREATE TABLE dbo.Users (
 CREATE UNIQUE INDEX UX_Users_Phone_NotNull
 ON dbo.Users(Phone)
 WHERE Phone IS NOT NULL;
-
-CREATE INDEX IX_Users_BankAccountNumber_NotNull
-ON dbo.Users(BankAccountNumber)
-WHERE BankAccountNumber IS NOT NULL;
-
-CREATE UNIQUE INDEX UX_Users_AuthProviderSubject_NotNull
-ON dbo.Users(AuthProvider, AuthProviderSubject)
-WHERE AuthProvider IS NOT NULL AND AuthProviderSubject IS NOT NULL;
-
-CREATE TABLE dbo.Pending_Registrations (
-    PendingRegistrationID BIGINT IDENTITY(1,1) PRIMARY KEY,
-    Username NVARCHAR(50) NOT NULL,
-    Email NVARCHAR(255) NOT NULL,
-    PasswordHash NVARCHAR(255) NOT NULL,
-    FullName NVARCHAR(120) NOT NULL,
-    Phone NVARCHAR(30) NULL,
-    Address NVARCHAR(255) NULL,
-    VerificationCodeHash NVARCHAR(255) NOT NULL,
-    ExpiresAt DATETIME2(0) NOT NULL,
-    Attempts INT NOT NULL DEFAULT 0,
-    CreatedAt DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
-    UpdatedAt DATETIME2(0) NULL,
-    CONSTRAINT CK_PendingRegistrations_Attempts CHECK (Attempts >= 0)
-);
-
-CREATE UNIQUE INDEX UX_PendingRegistrations_Username
-ON dbo.Pending_Registrations(Username);
-
-CREATE UNIQUE INDEX UX_PendingRegistrations_Email
-ON dbo.Pending_Registrations(Email);
-
-CREATE TABLE dbo.Password_Reset_Codes (
-    PasswordResetID BIGINT IDENTITY(1,1) PRIMARY KEY,
-    UserID INT NOT NULL,
-    CodeHash NVARCHAR(255) NOT NULL,
-    ExpiresAt DATETIME2(0) NOT NULL,
-    Attempts INT NOT NULL DEFAULT 0,
-    ConsumedAt DATETIME2(0) NULL,
-    CreatedAt DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
-    CONSTRAINT FK_PasswordResetCodes_Users FOREIGN KEY (UserID)
-        REFERENCES dbo.Users(UserID),
-    CONSTRAINT CK_PasswordResetCodes_Attempts CHECK (Attempts >= 0)
-);
-
-CREATE INDEX IX_PasswordResetCodes_User_Active
-ON dbo.Password_Reset_Codes(UserID, ConsumedAt, CreatedAt DESC);
 
 CREATE TABLE dbo.User_Roles (
     UserID INT NOT NULL,
@@ -131,20 +83,6 @@ CREATE TABLE dbo.Customers (
         REFERENCES dbo.Users(UserID)
 );
 
-CREATE TABLE dbo.Employees (
-    EmployeeID INT IDENTITY(1,1) PRIMARY KEY,
-    UserID INT NOT NULL UNIQUE,
-    EmployeeCode NVARCHAR(30) NOT NULL UNIQUE,
-    JobTitle NVARCHAR(80) NULL,
-    HireDate DATE NULL,
-    Status NVARCHAR(20) NOT NULL DEFAULT N'ACTIVE',
-    CONSTRAINT FK_Employees_Users FOREIGN KEY (UserID)
-        REFERENCES dbo.Users(UserID),
-    CONSTRAINT CK_Employees_Status CHECK (
-        Status IN (N'ACTIVE', N'INACTIVE')
-    )
-);
-
 CREATE TABLE dbo.Drivers (
     DriverID INT IDENTITY(1,1) PRIMARY KEY,
     UserID INT NOT NULL UNIQUE,
@@ -159,20 +97,6 @@ CREATE TABLE dbo.Drivers (
     CONSTRAINT CK_Drivers_BaseDailyFee CHECK (BaseDailyFee >= 0),
     CONSTRAINT CK_Drivers_Status CHECK (
         EmploymentStatus IN (N'ACTIVE', N'ON_LEAVE', N'INACTIVE')
-    )
-);
-
-CREATE TABLE dbo.System_Settings (
-    SettingKey NVARCHAR(100) PRIMARY KEY,
-    SettingValue NVARCHAR(500) NOT NULL,
-    DataType NVARCHAR(30) NOT NULL DEFAULT N'STRING',
-    Description NVARCHAR(255) NULL,
-    UpdatedByUserID INT NULL,
-    UpdatedAt DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
-    CONSTRAINT FK_SystemSettings_Users FOREIGN KEY (UpdatedByUserID)
-        REFERENCES dbo.Users(UserID),
-    CONSTRAINT CK_SystemSettings_DataType CHECK (
-        DataType IN (N'STRING', N'NUMBER', N'BOOLEAN', N'JSON')
     )
 );
 
@@ -273,13 +197,11 @@ CREATE TABLE dbo.Contracts (
     CONSTRAINT CK_Contracts_Status CHECK (
         Status IN (
             N'PENDING_PAYMENT',
-            N'PAYMENT_EXPIRED',
             N'RESERVED',
             N'CONFIRMED',
             N'CANCELLED',
             N'CAR_PICKED_UP',
             N'CAR_RETURNED',
-            N'SETTLEMENT_PENDING',
             N'COMPLETED'
         )
     )
@@ -350,88 +272,9 @@ CREATE UNIQUE INDEX UX_DriverAssignments_ActiveDetail
 ON dbo.Driver_Assignments(ContractDetailID)
 WHERE AssignmentStatus <> N'CANCELLED';
 
-CREATE TABLE dbo.Car_Handovers (
-    HandoverID BIGINT IDENTITY(1,1) PRIMARY KEY,
-    ContractDetailID BIGINT NOT NULL,
-    HandoverType NVARCHAR(20) NOT NULL,
-    HandoverAt DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
-    Odometer INT NULL,
-    FuelLevel NVARCHAR(30) NULL,
-    CarConditionNote NVARCHAR(500) NULL,
-    StaffUserID INT NULL,
-    DriverID INT NULL,
-    CustomerConfirmed BIT NOT NULL DEFAULT 0,
-    DriverConfirmed BIT NOT NULL DEFAULT 0,
-    CONSTRAINT FK_CarHandovers_ContractDetails FOREIGN KEY (ContractDetailID)
-        REFERENCES dbo.Contract_Details(ContractDetailID),
-    CONSTRAINT FK_CarHandovers_Staff FOREIGN KEY (StaffUserID)
-        REFERENCES dbo.Users(UserID),
-    CONSTRAINT FK_CarHandovers_Drivers FOREIGN KEY (DriverID)
-        REFERENCES dbo.Drivers(DriverID),
-    CONSTRAINT UQ_CarHandovers_Detail_Type UNIQUE (ContractDetailID, HandoverType),
-    CONSTRAINT CK_CarHandovers_Type CHECK (
-        HandoverType IN (N'PICKUP', N'RETURN')
-    ),
-    CONSTRAINT CK_CarHandovers_Odometer CHECK (
-        Odometer IS NULL OR Odometer >= 0
-    )
-);
-
-CREATE TABLE dbo.Payment_Transactions (
-    PaymentTransactionID BIGINT IDENTITY(1,1) PRIMARY KEY,
-    ContractID BIGINT NOT NULL,
-    Provider NVARCHAR(40) NOT NULL,
-    ProviderTransactionRef NVARCHAR(100) NOT NULL UNIQUE,
-    ProviderOrderCode BIGINT NULL,
-    ProviderPaymentRef NVARCHAR(100) NULL,
-    Amount DECIMAL(12,2) NOT NULL,
-    Status NVARCHAR(30) NOT NULL DEFAULT N'PENDING',
-    QrPayload NVARCHAR(1000) NULL,
-    ProviderCheckoutUrl NVARCHAR(500) NULL,
-    ProviderQrCode NVARCHAR(MAX) NULL,
-    ExpiredAt DATETIME2(0) NULL,
-    PaidAt DATETIME2(0) NULL,
-    Metadata NVARCHAR(MAX) NULL,
-    CreatedAt DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
-    UpdatedAt DATETIME2(0) NULL,
-    CONSTRAINT FK_PaymentTransactions_Contracts FOREIGN KEY (ContractID)
-        REFERENCES dbo.Contracts(ContractID),
-    CONSTRAINT CK_PaymentTransactions_Amount CHECK (Amount > 0),
-    CONSTRAINT CK_PaymentTransactions_Status CHECK (
-        Status IN (
-            N'PENDING',
-            N'PAID',
-            N'FAILED',
-            N'EXPIRED',
-            N'REFUND_PENDING',
-            N'REFUNDED',
-            N'PARTIALLY_REFUNDED'
-        )
-    )
-);
-
-CREATE TABLE dbo.Payment_Webhook_Events (
-    WebhookEventID BIGINT IDENTITY(1,1) PRIMARY KEY,
-    Provider NVARCHAR(40) NOT NULL,
-    EventRef NVARCHAR(150) NOT NULL,
-    ProviderTransactionRef NVARCHAR(100) NULL,
-    Payload NVARCHAR(MAX) NULL,
-    Signature NVARCHAR(200) NULL,
-    ProcessingStatus NVARCHAR(30) NOT NULL DEFAULT N'RECEIVED',
-    ErrorMessage NVARCHAR(500) NULL,
-    CreatedAt DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
-    ProcessedAt DATETIME2(0) NULL,
-    CONSTRAINT UQ_PaymentWebhookEvents_Provider_EventRef UNIQUE (Provider, EventRef),
-    CONSTRAINT CK_PaymentWebhookEvents_Status CHECK (
-        ProcessingStatus IN (N'RECEIVED', N'PROCESSED', N'DUPLICATE', N'FAILED')
-    )
-);
-
 CREATE TABLE dbo.Payments (
     PaymentID BIGINT IDENTITY(1,1) PRIMARY KEY,
     ContractID BIGINT NOT NULL,
-    PaymentTransactionID BIGINT NULL,
-    SourcePaymentID BIGINT NULL,
     PaymentType NVARCHAR(30) NOT NULL,
     Amount DECIMAL(12,2) NOT NULL,
     PaymentMethod NVARCHAR(30) NOT NULL,
@@ -443,77 +286,23 @@ CREATE TABLE dbo.Payments (
     CreatedAt DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
     CONSTRAINT FK_Payments_Contracts FOREIGN KEY (ContractID)
         REFERENCES dbo.Contracts(ContractID),
-    CONSTRAINT FK_Payments_PaymentTransactions FOREIGN KEY (PaymentTransactionID)
-        REFERENCES dbo.Payment_Transactions(PaymentTransactionID),
-    CONSTRAINT FK_Payments_SourcePayment FOREIGN KEY (SourcePaymentID)
-        REFERENCES dbo.Payments(PaymentID),
     CONSTRAINT FK_Payments_ReceivedBy FOREIGN KEY (ReceivedByUserID)
         REFERENCES dbo.Users(UserID),
     CONSTRAINT CK_Payments_Amount CHECK (Amount > 0),
     CONSTRAINT CK_Payments_Type CHECK (
         PaymentType IN (
             N'DEPOSIT',
-            N'RENTAL_PREPAID',
-            N'DRIVER_FEE_PREPAID',
-            N'RENTAL_BALANCE',
-            N'EXTRA_CHARGE',
-            N'REFUND'
+            N'RENTAL_BALANCE'
         )
     ),
     CONSTRAINT CK_Payments_Method CHECK (
-        PaymentMethod IN (N'CASH', N'BANK_TRANSFER', N'CARD', N'E_WALLET', N'OTHER')
+        PaymentMethod = N'CASH'
     ),
     CONSTRAINT CK_Payments_Status CHECK (
         PaymentStatus IN (
             N'PENDING',
-            N'PAID',
-            N'FAILED',
-            N'EXPIRED',
-            N'REFUND_PENDING',
-            N'REFUNDED',
-            N'PARTIALLY_REFUNDED'
+            N'PAID'
         )
-    )
-);
-
-CREATE TABLE dbo.Refunds (
-    RefundID BIGINT IDENTITY(1,1) PRIMARY KEY,
-    ContractID BIGINT NOT NULL,
-    SourcePaymentID BIGINT NOT NULL,
-    DepositAmount DECIMAL(12,2) NOT NULL,
-    DeductionAmount DECIMAL(12,2) NOT NULL DEFAULT 0,
-    RefundAmount DECIMAL(12,2) NOT NULL,
-    Reason NVARCHAR(500) NULL,
-    RefundMethod NVARCHAR(30) NOT NULL DEFAULT N'GATEWAY_REFUND',
-    ProofOfRefund NVARCHAR(1000) NULL,
-    Status NVARCHAR(30) NOT NULL DEFAULT N'REFUND_PENDING',
-    ApprovedByUserID INT NULL,
-    CompletedByUserID INT NULL,
-    ProviderRefundRef NVARCHAR(100) NULL,
-    CompletedAt DATETIME2(0) NULL,
-    CreatedAt DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
-    UpdatedAt DATETIME2(0) NULL,
-    CONSTRAINT FK_Refunds_Contracts FOREIGN KEY (ContractID)
-        REFERENCES dbo.Contracts(ContractID),
-    CONSTRAINT FK_Refunds_SourcePayment FOREIGN KEY (SourcePaymentID)
-        REFERENCES dbo.Payments(PaymentID),
-    CONSTRAINT FK_Refunds_ApprovedBy FOREIGN KEY (ApprovedByUserID)
-        REFERENCES dbo.Users(UserID),
-    CONSTRAINT FK_Refunds_CompletedBy FOREIGN KEY (CompletedByUserID)
-        REFERENCES dbo.Users(UserID),
-    CONSTRAINT CK_Refunds_Amounts CHECK (
-        DepositAmount >= 0 AND DeductionAmount >= 0 AND RefundAmount >= 0
-    ),
-    CONSTRAINT CK_Refunds_Method CHECK (
-        RefundMethod IN (
-            N'GATEWAY_REFUND',
-            N'CASH_AT_COUNTER',
-            N'MANUAL_BANK_TRANSFER',
-            N'WALLET_CREDIT'
-        )
-    ),
-    CONSTRAINT CK_Refunds_Status CHECK (
-        Status IN (N'REFUND_PENDING', N'REFUNDED', N'FAILED')
     )
 );
 
@@ -531,44 +320,6 @@ CREATE TABLE dbo.Contract_Status_History (
         REFERENCES dbo.Users(UserID)
 );
 
-CREATE TABLE dbo.Support_Tickets (
-    TicketID BIGINT IDENTITY(1,1) PRIMARY KEY,
-    TicketCode NVARCHAR(30) NOT NULL UNIQUE,
-    UserID INT NOT NULL,
-    ContractID BIGINT NULL,
-    Category NVARCHAR(40) NOT NULL,
-    Subject NVARCHAR(150) NOT NULL,
-    Message NVARCHAR(1000) NOT NULL,
-    Status NVARCHAR(30) NOT NULL DEFAULT N'OPEN',
-    Priority NVARCHAR(20) NOT NULL DEFAULT N'NORMAL',
-    StaffResponse NVARCHAR(1000) NULL,
-    AssignedToUserID INT NULL,
-    ResolvedAt DATETIME2(0) NULL,
-    CreatedAt DATETIME2(0) NOT NULL DEFAULT SYSUTCDATETIME(),
-    UpdatedAt DATETIME2(0) NULL,
-    CONSTRAINT FK_SupportTickets_Users FOREIGN KEY (UserID)
-        REFERENCES dbo.Users(UserID),
-    CONSTRAINT FK_SupportTickets_Contracts FOREIGN KEY (ContractID)
-        REFERENCES dbo.Contracts(ContractID),
-    CONSTRAINT FK_SupportTickets_AssignedTo FOREIGN KEY (AssignedToUserID)
-        REFERENCES dbo.Users(UserID),
-    CONSTRAINT CK_SupportTickets_Category CHECK (
-        Category IN (N'BANK_INFO', N'PAYMENT', N'REFUND', N'CONTRACT', N'ACCOUNT', N'OTHER')
-    ),
-    CONSTRAINT CK_SupportTickets_Status CHECK (
-        Status IN (N'OPEN', N'IN_PROGRESS', N'RESOLVED', N'REJECTED')
-    ),
-    CONSTRAINT CK_SupportTickets_Priority CHECK (
-        Priority IN (N'LOW', N'NORMAL', N'HIGH')
-    )
-);
-
-CREATE INDEX IX_SupportTickets_Status_CreatedAt
-ON dbo.Support_Tickets(Status, CreatedAt DESC);
-
-CREATE INDEX IX_SupportTickets_User_CreatedAt
-ON dbo.Support_Tickets(UserID, CreatedAt DESC);
-
 CREATE INDEX IX_Cars_Type_Status
 ON dbo.Cars(CarTypeID, Status);
 
@@ -583,16 +334,6 @@ ON dbo.Driver_Assignments(DriverID, AssignmentStatus);
 
 CREATE INDEX IX_Payments_Contract
 ON dbo.Payments(ContractID);
-
-CREATE INDEX IX_PaymentTransactions_Contract_Status
-ON dbo.Payment_Transactions(ContractID, Status);
-
-CREATE UNIQUE INDEX UX_PaymentTransactions_ProviderOrderCode
-ON dbo.Payment_Transactions(ProviderOrderCode)
-WHERE ProviderOrderCode IS NOT NULL;
-
-CREATE INDEX IX_Refunds_Contract
-ON dbo.Refunds(ContractID);
 
 CREATE INDEX IX_CarMaintenance_Car_Dates
 ON dbo.Car_Maintenance(CarID, StartAt, EndAt, Status);
@@ -739,28 +480,14 @@ VALUES
 (N'5 seats', 5, N'Sedan or compact SUV'),
 (N'7 seats', 7, N'Large SUV or MPV');
 
-INSERT INTO dbo.System_Settings (SettingKey, SettingValue, DataType, Description)
-VALUES
-(N'DEPOSIT_REQUIRED_BEFORE_RESERVATION', N'true', N'BOOLEAN', N'Deposit must be paid before the car is reserved'),
-(N'DEFAULT_CURRENCY', N'VND', N'STRING', N'Default display currency');
 GO
 
 
 /* ============================================================
-   2. Demo users, roles, customers, employees, drivers, and base cars
+   2. Demo users, roles, customers, drivers, and base cars
    ============================================================ */
 
-USE master;
-GO
-
-IF DB_ID(N'CarRentalDB') IS NULL
-BEGIN
-    RAISERROR(N'CarRentalDB does not exist. Run sql/setup-database.sql from the beginning.', 16, 1);
-    RETURN;
-END;
-GO
-
-USE CarRentalDB;
+USE CarRentalCore;
 GO
 
 IF OBJECT_ID(N'dbo.Users', N'U') IS NULL OR OBJECT_ID(N'dbo.Cars', N'U') IS NULL
@@ -768,31 +495,6 @@ BEGIN
     RAISERROR(N'Required tables do not exist. Run sql/setup-database.sql from the beginning.', 16, 1);
     RETURN;
 END;
-GO
-
--- Roles
-IF NOT EXISTS (SELECT 1 FROM dbo.Roles WHERE RoleName = N'CUSTOMER')
-    INSERT INTO dbo.Roles (RoleName, Description) VALUES (N'CUSTOMER', N'Customer account');
-IF NOT EXISTS (SELECT 1 FROM dbo.Roles WHERE RoleName = N'STAFF')
-    INSERT INTO dbo.Roles (RoleName, Description) VALUES (N'STAFF', N'Nhan vien van hanh hop dong');
-IF NOT EXISTS (SELECT 1 FROM dbo.Roles WHERE RoleName = N'MANAGER')
-    INSERT INTO dbo.Roles (RoleName, Description) VALUES (N'MANAGER', N'Quan ly doi xe va tai xe');
-IF NOT EXISTS (SELECT 1 FROM dbo.Roles WHERE RoleName = N'DRIVER')
-    INSERT INTO dbo.Roles (RoleName, Description) VALUES (N'DRIVER', N'Tai xe');
-IF NOT EXISTS (SELECT 1 FROM dbo.Roles WHERE RoleName = N'ADMIN')
-    INSERT INTO dbo.Roles (RoleName, Description) VALUES (N'ADMIN', N'Quan tri he thong');
-GO
-
--- Car types
-IF NOT EXISTS (SELECT 1 FROM dbo.Car_Types WHERE SeatCount = 4)
-    INSERT INTO dbo.Car_Types (TypeName, SeatCount, Description)
-    VALUES (N'4 seats', 4, N'Xe 4 cho');
-IF NOT EXISTS (SELECT 1 FROM dbo.Car_Types WHERE SeatCount = 5)
-    INSERT INTO dbo.Car_Types (TypeName, SeatCount, Description)
-    VALUES (N'5 seats', 5, N'Xe 5 cho');
-IF NOT EXISTS (SELECT 1 FROM dbo.Car_Types WHERE SeatCount = 7)
-    INSERT INTO dbo.Car_Types (TypeName, SeatCount, Description)
-    VALUES (N'7 seats', 7, N'Xe 7 cho');
 GO
 
 -- Demo users. Legacy plaintext demo passwords are accepted once and auto-upgraded to PBKDF2 on login.
@@ -870,20 +572,6 @@ WHERE u.Username IN (N'customer01', N'customer02')
   AND NOT EXISTS (
       SELECT 1 FROM dbo.User_Roles ur WHERE ur.UserID = u.UserID AND ur.RoleID = r.RoleID
   );
-GO
-
--- Employee profiles
-IF NOT EXISTS (SELECT 1 FROM dbo.Employees e JOIN dbo.Users u ON u.UserID = e.UserID WHERE u.Username = N'admin')
-    INSERT INTO dbo.Employees (UserID, EmployeeCode, JobTitle)
-    SELECT UserID, N'EMP-ADMIN', N'System Administrator' FROM dbo.Users WHERE Username = N'admin';
-
-IF NOT EXISTS (SELECT 1 FROM dbo.Employees e JOIN dbo.Users u ON u.UserID = e.UserID WHERE u.Username = N'staff01')
-    INSERT INTO dbo.Employees (UserID, EmployeeCode, JobTitle)
-    SELECT UserID, N'EMP-001', N'Nhan vien xu ly don' FROM dbo.Users WHERE Username = N'staff01';
-
-IF NOT EXISTS (SELECT 1 FROM dbo.Employees e JOIN dbo.Users u ON u.UserID = e.UserID WHERE u.Username = N'manager01')
-    INSERT INTO dbo.Employees (UserID, EmployeeCode, JobTitle)
-    SELECT UserID, N'EMP-002', N'Quan ly doi xe' FROM dbo.Users WHERE Username = N'manager01';
 GO
 
 -- Driver profiles
@@ -992,95 +680,10 @@ GO
 
 
 /* ============================================================
-   3. Low-value PayOS test cars
+   3. Extra fleet quantity demo cars
    ============================================================ */
 
-USE CarRentalDB;
-GO
-
-SET NOCOUNT ON;
-SET XACT_ABORT ON;
-
-IF OBJECT_ID(N'dbo.Cars', N'U') IS NULL OR OBJECT_ID(N'dbo.Car_Types', N'U') IS NULL
-BEGIN
-    THROW 50001, 'Cars or Car_Types table does not exist. Run sql/setup-database.sql from the beginning.', 1;
-END;
-
-DECLARE @Type4 INT = (SELECT TOP 1 CarTypeID FROM dbo.Car_Types WHERE SeatCount = 4 ORDER BY CarTypeID);
-
-IF @Type4 IS NULL
-BEGIN
-    INSERT INTO dbo.Car_Types (TypeName, SeatCount, Description)
-    VALUES (N'4 seats', 4, N'Sedan 4 seats');
-    SET @Type4 = SCOPE_IDENTITY();
-END;
-
-BEGIN TRANSACTION;
-
-MERGE dbo.Cars AS target
-USING (VALUES
-    (N'TEST-2K-01', N'PayOS', N'Test 2K', CAST(2026 AS SMALLINT), N'Trang', N'AUTOMATIC', N'GASOLINE', 100, CAST(2000 AS DECIMAL(12,2)), CAST(2000 AS DECIMAL(12,2)), N'AVAILABLE', N'Xe test payOS gia thue 2.000 VND/ngay'),
-    (N'TEST-2K-02', N'PayOS', N'Test 2K', CAST(2026 AS SMALLINT), N'Den', N'AUTOMATIC', N'GASOLINE', 120, CAST(2000 AS DECIMAL(12,2)), CAST(2000 AS DECIMAL(12,2)), N'AVAILABLE', N'Xe test payOS gia thue 2.000 VND/ngay'),
-    (N'TEST-2K-03', N'PayOS', N'Test 2K', CAST(2026 AS SMALLINT), N'Bac', N'AUTOMATIC', N'GASOLINE', 150, CAST(2000 AS DECIMAL(12,2)), CAST(2000 AS DECIMAL(12,2)), N'AVAILABLE', N'Xe test payOS gia thue 2.000 VND/ngay'),
-    (N'TEST-2K-04', N'PayOS', N'Test 2K', CAST(2026 AS SMALLINT), N'Xanh', N'AUTOMATIC', N'HYBRID', 180, CAST(2000 AS DECIMAL(12,2)), CAST(2000 AS DECIMAL(12,2)), N'AVAILABLE', N'Xe test payOS gia thue 2.000 VND/ngay'),
-    (N'TEST-2K-05', N'PayOS', N'Test 2K', CAST(2026 AS SMALLINT), N'Do', N'AUTOMATIC', N'GASOLINE', 200, CAST(2000 AS DECIMAL(12,2)), CAST(2000 AS DECIMAL(12,2)), N'AVAILABLE', N'Xe test payOS gia thue 2.000 VND/ngay')
-) AS source (
-    LicensePlate, Brand, Model, ManufactureYear, Color, Transmission, FuelType,
-    Mileage, DailyRate, DepositAmount, Status, Description
-)
-ON target.LicensePlate = source.LicensePlate
-WHEN MATCHED THEN
-    UPDATE SET
-        CarTypeID = @Type4,
-        Brand = source.Brand,
-        Model = source.Model,
-        ManufactureYear = source.ManufactureYear,
-        Color = source.Color,
-        Transmission = source.Transmission,
-        FuelType = source.FuelType,
-        Mileage = source.Mileage,
-        DailyRate = source.DailyRate,
-        DepositAmount = source.DepositAmount,
-        Status = source.Status,
-        Description = source.Description,
-        UpdatedAt = SYSUTCDATETIME()
-WHEN NOT MATCHED THEN
-    INSERT (
-        CarTypeID, LicensePlate, Brand, Model, ManufactureYear, Color,
-        Transmission, FuelType, Mileage, DailyRate, DepositAmount, Status, Description
-    )
-    VALUES (
-        @Type4, source.LicensePlate, source.Brand, source.Model, source.ManufactureYear, source.Color,
-        source.Transmission, source.FuelType, source.Mileage, source.DailyRate,
-        source.DepositAmount, source.Status, source.Description
-    );
-
-COMMIT TRANSACTION;
-
--- Demo car images from 4kwallpapers.com.
-UPDATE dbo.Cars
-SET ImageUrl = CASE LicensePlate
-    WHEN N'TEST-2K-01' THEN N'https://4kwallpapers.com/images/walls/thumbs_2t/16338.jpg'
-    WHEN N'TEST-2K-02' THEN N'https://4kwallpapers.com/images/walls/thumbs_2t/11004.jpeg'
-    WHEN N'TEST-2K-03' THEN N'https://4kwallpapers.com/images/walls/thumbs_2t/7826.jpg'
-    WHEN N'TEST-2K-04' THEN N'https://4kwallpapers.com/images/walls/thumbs_2t/24409.jpg'
-    WHEN N'TEST-2K-05' THEN N'https://4kwallpapers.com/images/walls/thumbs_2t/16004.jpeg'
-    ELSE ImageUrl
-END,
-UpdatedAt = SYSUTCDATETIME()
-WHERE LicensePlate LIKE N'TEST-2K-%';
-
-SELECT LicensePlate, Brand, Model, DailyRate, DepositAmount, Status
-FROM dbo.Cars
-WHERE LicensePlate LIKE N'TEST-2K-%'
-ORDER BY LicensePlate;
-
-
-/* ============================================================
-   4. Extra fleet quantity demo cars
-   ============================================================ */
-
-USE CarRentalDB;
+USE CarRentalCore;
 GO
 
 SET NOCOUNT ON;

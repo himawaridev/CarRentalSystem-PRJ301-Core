@@ -7,7 +7,6 @@ public class SettlementResult {
     private BigDecimal depositPaid = BigDecimal.ZERO;
     private BigDecimal rentalPaid = BigDecimal.ZERO;
     private BigDecimal expectedRental = BigDecimal.ZERO;
-    private BigDecimal extraCharge = BigDecimal.ZERO;
     private BigDecimal amountToCollect = BigDecimal.ZERO;
 
     public long getContractId() { return contractId; }
@@ -21,9 +20,6 @@ public class SettlementResult {
 
     public BigDecimal getExpectedRental() { return expectedRental; }
     public void setExpectedRental(BigDecimal expectedRental) { this.expectedRental = safe(expectedRental); }
-
-    public BigDecimal getExtraCharge() { return extraCharge; }
-    public void setExtraCharge(BigDecimal extraCharge) { this.extraCharge = safe(extraCharge); }
 
     public BigDecimal getAmountToCollect() { return amountToCollect; }
     public void setAmountToCollect(BigDecimal amountToCollect) { this.amountToCollect = safe(amountToCollect); }
