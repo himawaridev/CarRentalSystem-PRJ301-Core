@@ -28,6 +28,7 @@ public class Car {
     private String typeName;
     private int seatCount;
     private int availableQuantity;
+    private boolean booked;
 
     public Car() {}
 
@@ -88,6 +89,13 @@ public class Car {
 
     public int getAvailableQuantity() { return availableQuantity; }
     public void setAvailableQuantity(int availableQuantity) { this.availableQuantity = Math.max(availableQuantity, 0); }
+
+    public boolean isBooked() { return booked; }
+    public void setBooked(boolean booked) { this.booked = booked; }
+
+    public String getDisplayStatus() {
+        return booked ? "BOOKED" : status;
+    }
 
     @Override
     public String toString() {

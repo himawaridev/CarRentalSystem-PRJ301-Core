@@ -63,6 +63,7 @@
                             <select name="status" id="catalogStatus" class="form-select">
                                 <option value="">Tat ca trang thai</option>
                                 <option value="AVAILABLE" ${statusFilter == 'AVAILABLE' ? 'selected' : ''}>San sang</option>
+                                <option value="BOOKED" ${statusFilter == 'BOOKED' ? 'selected' : ''}>Da duoc dat</option>
                                 <option value="MAINTENANCE" ${statusFilter == 'MAINTENANCE' ? 'selected' : ''}>Bao tri</option>
                             </select>
                         </div>
@@ -139,6 +140,11 @@
                              decoding="async"
                              onerror="this.onerror=null;this.src='${placeholderImage}';">
                         <c:choose>
+                            <c:when test="${car.booked}">
+                                <span class="catalog-status catalog-status-booked">
+                                    <i class="bi bi-calendar-check-fill me-1"></i>Da duoc dat
+                                </span>
+                            </c:when>
                             <c:when test="${car.status == 'AVAILABLE'}">
                                 <span class="catalog-status catalog-status-available">
                                     <i class="bi bi-check-circle-fill me-1"></i>San sang
@@ -166,7 +172,7 @@
                                     <i class="bi bi-upc-scan me-1"></i>${car.licensePlate}
                                 </div>
                             </div>
-                            <c:if test="${car.status == 'AVAILABLE' && canBook}">
+                            <c:if test="${car.status == 'AVAILABLE' && not car.booked && canBook}">
                                 <div class="form-check m-0">
                                     <input class="form-check-input catalog-car-checkbox" type="checkbox"
                                            id="selectCar-${car.carId}" value="${car.carId}"
@@ -229,7 +235,7 @@
                                     Dat coc: <fmt:formatNumber value="${car.depositAmount}" pattern="#,###"/> VND
                                 </div>
                             </div>
-                            <c:if test="${car.status == 'AVAILABLE' && canBook}">
+                            <c:if test="${car.status == 'AVAILABLE' && not car.booked && canBook}">
                                 <button type="button" class="btn btn-accent btn-action-nowrap btn-sm catalog-select-btn"
                                         id="selectBtn-${car.carId}" onclick="toggleCatalogSelection(${car.carId})">
                                     <i class="bi bi-check2-square"></i><span>Chon</span>

@@ -66,7 +66,7 @@ public class CarCatalogServlet extends HttpServlet {
                 .filter(c -> brandFilter == null || brandFilter.isBlank()
                         || c.getBrand().equalsIgnoreCase(brandFilter))
                 .filter(c -> statusFilter == null || statusFilter.isBlank()
-                        || c.getStatus().equalsIgnoreCase(statusFilter))
+                        || c.getDisplayStatus().equalsIgnoreCase(statusFilter))
                 .filter(c -> minRate == null || c.getDailyRate().compareTo(minRate) >= 0)
                 .filter(c -> maxRate == null || c.getDailyRate().compareTo(maxRate) <= 0)
                 .toList();

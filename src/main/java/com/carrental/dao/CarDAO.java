@@ -13,6 +13,9 @@ import java.util.Set;
 
 public class CarDAO {
 
+    private static final String ACTIVE_BOOKING_STATUSES =
+            "(N'PENDING_PAYMENT',N'RESERVED',N'CONFIRMED',N'CAR_PICKED_UP')";
+
     public List<Car> findAvailableCars(Integer seatCount, LocalDateTime pickupAt, LocalDateTime returnAt) {
         return findAvailableCars(seatCount, null, null, null, pickupAt, returnAt);
     }
@@ -38,7 +41,7 @@ public class CarDAO {
         sql.append("AND NOT EXISTS (SELECT 1 FROM dbo.Contract_Details cd "
             + "INNER JOIN dbo.Contracts con ON cd.ContractID = con.ContractID "
             + "WHERE cd.CarID = c.CarID AND cd.DetailStatus <> N'CANCELLED' "
-            + "AND con.Status IN (N'RESERVED',N'CONFIRMED',N'CAR_PICKED_UP') "
+            + "AND con.Status IN " + ACTIVE_BOOKING_STATUSES + " "
             + "AND con.PickupAt < ? AND con.ReturnAt > ?) ");
         sql.append("AND NOT EXISTS (SELECT 1 FROM dbo.Car_Maintenance cm "
             + "WHERE cm.CarID = c.CarID AND cm.Status IN (N'SCHEDULED',N'IN_PROGRESS') "
@@ -95,7 +98,7 @@ public class CarDAO {
         sql.append("AND NOT EXISTS (SELECT 1 FROM dbo.Contract_Details cd "
             + "INNER JOIN dbo.Contracts con ON cd.ContractID = con.ContractID "
             + "WHERE cd.CarID = c.CarID AND cd.DetailStatus <> N'CANCELLED' "
-            + "AND con.Status IN (N'RESERVED',N'CONFIRMED',N'CAR_PICKED_UP') "
+            + "AND con.Status IN " + ACTIVE_BOOKING_STATUSES + " "
             + "AND con.PickupAt < ? AND con.ReturnAt > ?) ");
         sql.append("AND NOT EXISTS (SELECT 1 FROM dbo.Car_Maintenance cm "
             + "WHERE cm.CarID = c.CarID AND cm.Status IN (N'SCHEDULED',N'IN_PROGRESS') "
@@ -146,7 +149,7 @@ public class CarDAO {
         sql.append("AND NOT EXISTS (SELECT 1 FROM dbo.Contract_Details cd "
             + "INNER JOIN dbo.Contracts con ON cd.ContractID = con.ContractID "
             + "WHERE cd.CarID = c.CarID AND cd.DetailStatus <> N'CANCELLED' "
-            + "AND con.Status IN (N'RESERVED',N'CONFIRMED',N'CAR_PICKED_UP') "
+            + "AND con.Status IN " + ACTIVE_BOOKING_STATUSES + " "
             + "AND con.PickupAt < ? AND con.ReturnAt > ?) ");
         sql.append("AND NOT EXISTS (SELECT 1 FROM dbo.Car_Maintenance cm "
             + "WHERE cm.CarID = c.CarID AND cm.Status IN (N'SCHEDULED',N'IN_PROGRESS') "
@@ -174,7 +177,11 @@ public class CarDAO {
 
     public Car getCarById(int carId) {
         String sql = "SELECT c.*, ct.TypeName, ct.SeatCount, "
-            + "ISNULL(g.AvailableQuantity, 0) AS AvailableQuantity "
+            + "ISNULL(g.AvailableQuantity, 0) AS AvailableQuantity, "
+            + "CASE WHEN EXISTS (SELECT 1 FROM dbo.Contract_Details cd "
+            + "INNER JOIN dbo.Contracts con ON cd.ContractID = con.ContractID "
+            + "WHERE cd.CarID = c.CarID AND cd.DetailStatus <> N'CANCELLED' "
+            + "AND con.Status IN " + ACTIVE_BOOKING_STATUSES + ") THEN 1 ELSE 0 END AS IsBooked "
             + "FROM dbo.Cars c "
             + "INNER JOIN dbo.Car_Types ct ON c.CarTypeID = ct.CarTypeID "
             + "OUTER APPLY ("
@@ -204,14 +211,24 @@ public class CarDAO {
     public List<Car> getAllCars() {
         List<Car> cars = new ArrayList<>();
         String sql = "WITH AvailableGroups AS ("
-            + "SELECT CarTypeID, Brand, Model, ManufactureYear, Transmission, FuelType, DailyRate, DepositAmount, "
+            + "SELECT available.CarTypeID, available.Brand, available.Model, available.ManufactureYear, "
+            + "available.Transmission, available.FuelType, available.DailyRate, available.DepositAmount, "
             + "COUNT(*) AS AvailableQuantity "
-            + "FROM dbo.Cars "
-            + "WHERE Status = N'AVAILABLE' "
-            + "GROUP BY CarTypeID, Brand, Model, ManufactureYear, Transmission, FuelType, DailyRate, DepositAmount"
+            + "FROM dbo.Cars available "
+            + "WHERE available.Status = N'AVAILABLE' "
+            + "AND NOT EXISTS (SELECT 1 FROM dbo.Contract_Details cd "
+            + "INNER JOIN dbo.Contracts con ON cd.ContractID = con.ContractID "
+            + "WHERE cd.CarID = available.CarID AND cd.DetailStatus <> N'CANCELLED' "
+            + "AND con.Status IN " + ACTIVE_BOOKING_STATUSES + ") "
+            + "GROUP BY available.CarTypeID, available.Brand, available.Model, available.ManufactureYear, "
+            + "available.Transmission, available.FuelType, available.DailyRate, available.DepositAmount"
             + ") "
             + "SELECT c.*, ct.TypeName, ct.SeatCount, "
-            + "ISNULL(g.AvailableQuantity, 0) AS AvailableQuantity "
+            + "ISNULL(g.AvailableQuantity, 0) AS AvailableQuantity, "
+            + "CASE WHEN EXISTS (SELECT 1 FROM dbo.Contract_Details cd "
+            + "INNER JOIN dbo.Contracts con ON cd.ContractID = con.ContractID "
+            + "WHERE cd.CarID = c.CarID AND cd.DetailStatus <> N'CANCELLED' "
+            + "AND con.Status IN " + ACTIVE_BOOKING_STATUSES + ") THEN 1 ELSE 0 END AS IsBooked "
             + "FROM dbo.Cars c "
             + "INNER JOIN dbo.Car_Types ct ON c.CarTypeID = ct.CarTypeID "
             + "LEFT JOIN AvailableGroups g ON g.CarTypeID = c.CarTypeID "
@@ -307,7 +324,7 @@ public class CarDAO {
             + "AND NOT EXISTS (SELECT 1 FROM dbo.Contract_Details cd "
             + "INNER JOIN dbo.Contracts con ON cd.ContractID = con.ContractID "
             + "WHERE cd.CarID = candidate.CarID AND cd.DetailStatus <> N'CANCELLED' "
-            + "AND con.Status IN (N'RESERVED',N'CONFIRMED',N'CAR_PICKED_UP') "
+            + "AND con.Status IN " + ACTIVE_BOOKING_STATUSES + " "
             + "AND con.PickupAt < ? AND con.ReturnAt > ?) "
             + "AND NOT EXISTS (SELECT 1 FROM dbo.Car_Maintenance cm "
             + "WHERE cm.CarID = candidate.CarID AND cm.Status IN (N'SCHEDULED',N'IN_PROGRESS') "
@@ -367,7 +384,7 @@ public class CarDAO {
             + "AND NOT EXISTS (SELECT 1 FROM dbo.Contract_Details cd "
             + "INNER JOIN dbo.Contracts con ON cd.ContractID = con.ContractID "
             + "WHERE cd.CarID = c.CarID AND cd.DetailStatus <> N'CANCELLED' "
-            + "AND con.Status IN (N'RESERVED',N'CONFIRMED',N'CAR_PICKED_UP') "
+            + "AND con.Status IN " + ACTIVE_BOOKING_STATUSES + " "
             + "AND con.PickupAt < ? AND con.ReturnAt > ?) "
             + "AND NOT EXISTS (SELECT 1 FROM dbo.Car_Maintenance cm "
             + "WHERE cm.CarID = c.CarID AND cm.Status IN (N'SCHEDULED',N'IN_PROGRESS') "
@@ -473,7 +490,9 @@ public class CarDAO {
         c.setDescription(rs.getString("Description"));
         c.setTypeName(rs.getString("TypeName"));
         c.setSeatCount(rs.getInt("SeatCount"));
-        c.setAvailableQuantity(getOptionalInt(rs, "AvailableQuantity", "AVAILABLE".equals(c.getStatus()) ? 1 : 0));
+        c.setBooked(getOptionalInt(rs, "IsBooked", 0) == 1);
+        c.setAvailableQuantity(getOptionalInt(rs, "AvailableQuantity",
+                "AVAILABLE".equals(c.getStatus()) && !c.isBooked() ? 1 : 0));
         return c;
     }
 

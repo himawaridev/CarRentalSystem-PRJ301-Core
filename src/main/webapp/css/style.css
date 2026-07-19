@@ -1451,16 +1451,27 @@ a.text-accent:hover {
     position: absolute;
     top: 12px;
     right: 12px;
+    min-height: 26px;
     font-size: 0.72rem;
     font-weight: 700;
-    padding: 4px 10px;
+    padding: 5px 10px;
     border-radius: 20px;
     letter-spacing: 0.02em;
+    display: inline-flex;
+    align-items: center;
+    line-height: 1;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.14);
+    backdrop-filter: blur(6px);
 }
 .catalog-status-available {
     background: #dcfce7;
     color: #15803d;
     border: 1px solid #86efac;
+}
+.catalog-status-booked {
+    background: rgba(255, 247, 237, 0.96);
+    color: #9a3412;
+    border: 1px solid #fdba74;
 }
 .catalog-status-maintenance {
     background: #fef3c7;

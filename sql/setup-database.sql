@@ -356,8 +356,8 @@ BEGIN
         JOIN dbo.Contracts c2 ON cd2.ContractID = c2.ContractID
         WHERE i.DetailStatus <> N'CANCELLED'
           AND cd2.DetailStatus <> N'CANCELLED'
-          AND c1.Status IN (N'RESERVED', N'CONFIRMED', N'CAR_PICKED_UP')
-          AND c2.Status IN (N'RESERVED', N'CONFIRMED', N'CAR_PICKED_UP')
+          AND c1.Status IN (N'PENDING_PAYMENT', N'RESERVED', N'CONFIRMED', N'CAR_PICKED_UP')
+          AND c2.Status IN (N'PENDING_PAYMENT', N'RESERVED', N'CONFIRMED', N'CAR_PICKED_UP')
           AND c1.PickupAt < c2.ReturnAt
           AND c1.ReturnAt > c2.PickupAt
     )
@@ -386,8 +386,8 @@ BEGIN
             AND cd1.ContractDetailID <> cd2.ContractDetailID
             AND cd2.DetailStatus <> N'CANCELLED'
         JOIN dbo.Contracts c2 ON cd2.ContractID = c2.ContractID
-        WHERE c1.Status IN (N'RESERVED', N'CONFIRMED', N'CAR_PICKED_UP')
-          AND c2.Status IN (N'RESERVED', N'CONFIRMED', N'CAR_PICKED_UP')
+        WHERE c1.Status IN (N'PENDING_PAYMENT', N'RESERVED', N'CONFIRMED', N'CAR_PICKED_UP')
+          AND c2.Status IN (N'PENDING_PAYMENT', N'RESERVED', N'CONFIRMED', N'CAR_PICKED_UP')
           AND c1.PickupAt < c2.ReturnAt
           AND c1.ReturnAt > c2.PickupAt
     )

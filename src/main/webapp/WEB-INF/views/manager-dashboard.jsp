@@ -53,6 +53,7 @@
                         <td><fmt:formatNumber value="${car.depositAmount}" pattern="#,###"/></td>
                         <td>
                             <c:choose>
+                                <c:when test="${car.booked}"><span class="badge-status badge-deposit">DA DUOC DAT</span></c:when>
                                 <c:when test="${car.status == 'AVAILABLE'}"><span class="badge-status badge-accepted">AVAILABLE</span></c:when>
                                 <c:when test="${car.status == 'MAINTENANCE'}"><span class="badge-status badge-pending">MAINTENANCE</span></c:when>
                                 <c:otherwise><span class="badge-status badge-cancelled">${car.status}</span></c:otherwise>
