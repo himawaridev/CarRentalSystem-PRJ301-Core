@@ -82,6 +82,12 @@
                         </td>
                         <td class="table-actions-cell">
                             <div class="table-action-icons staff-action-icons">
+                                <a href="${pageContext.request.contextPath}/contract-detail?id=${c.contractId}"
+                                   class="btn btn-sm btn-outline-accent action-icon-btn"
+                                   data-bs-toggle="tooltip" data-bs-title="Xem chi tiet hop dong"
+                                   aria-label="Xem chi tiet hop dong ${c.contractCode}">
+                                    <i class="bi bi-eye"></i>
+                                </a>
                                 <c:if test="${c.status == 'PENDING_PAYMENT'}">
                                     <form method="post" action="${pageContext.request.contextPath}/staff/process" style="display:inline"
                                           onsubmit="return confirm('Xac nhan da nhan du tien coc bang tien mat?')">

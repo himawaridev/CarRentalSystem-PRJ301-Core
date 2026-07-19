@@ -19,10 +19,14 @@ public class ContractDetailServlet extends HttpServlet {
             throws ServletException, IOException {
         HttpSession session = request.getSession(false);
         User user = (User) session.getAttribute("loggedInUser");
+        @SuppressWarnings("unchecked")
+        List<String> roles = (List<String>) session.getAttribute("userRoles");
+        boolean staffView = roles != null
+                && (roles.contains("STAFF") || roles.contains("MANAGER") || roles.contains("ADMIN"));
 
         String idStr = request.getParameter("id");
         if (idStr == null) {
-            response.sendRedirect(request.getContextPath() + "/my-contracts");
+            redirectToContractList(request, response, staffView);
             return;
         }
 
@@ -33,21 +37,17 @@ public class ContractDetailServlet extends HttpServlet {
                 throw new NumberFormatException();
             }
         } catch (NumberFormatException e) {
-            response.sendRedirect(request.getContextPath() + "/my-contracts");
+            redirectToContractList(request, response, staffView);
             return;
         }
         ContractDAO contractDAO = new ContractDAO();
         Contract contract = contractDAO.getContractById(contractId);
 
         if (contract == null) {
-            response.sendRedirect(request.getContextPath() + "/my-contracts");
+            redirectToContractList(request, response, staffView);
             return;
         }
 
-        @SuppressWarnings("unchecked")
-        List<String> roles = (List<String>) session.getAttribute("userRoles");
-        boolean staffView = roles != null
-                && (roles.contains("STAFF") || roles.contains("MANAGER") || roles.contains("ADMIN"));
         if (!staffView) {
             Integer customerId = new UserDAO().getCustomerIdByUserId(user.getUserId());
             if (customerId == null || contract.getCustomerId() != customerId) {
@@ -78,5 +78,11 @@ public class ContractDetailServlet extends HttpServlet {
         request.setAttribute("paymentRecords", paymentDAO.getPaymentRecordsByContractId(contractId));
 
         request.getRequestDispatcher("/WEB-INF/views/contract-detail.jsp").forward(request, response);
+    }
+
+    private void redirectToContractList(HttpServletRequest request, HttpServletResponse response,
+            boolean staffView) throws IOException {
+        response.sendRedirect(request.getContextPath()
+                + (staffView ? "/staff/dashboard" : "/my-contracts"));
     }
 }
